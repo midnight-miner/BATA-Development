@@ -1,1 +1,2 @@
-contrib/bitcoind.bash-completion	bitcoind
+contrib/bitcoind.bash-completion	batad
+contrib/bitcoin-cli.bash-completion	bata-cli

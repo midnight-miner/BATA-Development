@@ -85,16 +85,36 @@ https://www.cryptocompare.com/coins/bta/forum
 
 https://www.cryptopia.co.nz/Forum/Thread/377
 
+### Installing Dependencies
 
-### instructions for Linux compile: 
+sudo apt-get install git build-essential openssl libminiupnpc-dev libboost++-dev libboost-all-dev libssl-dev libdb++-dev automake qrencode qt4-dev-tools libtool libqt4-dev libprotobuf-dev
 
-sudo apt-get install git build-essential openssl libminiupnpc-dev libboost++-dev libboost-all-dev libssl-dev libdb++-dev automake qt4-dev-tools libtool libqt4-dev libprotobuf-dev qrencode
-git clone https://github.com/BTA-BATA/BATA-SOURCE
-cd BATA-SOURCE
+### Installing db4.8
+
+wget http://download.oracle.com/berkeley-db/db-4.8.30.NC.tar.gz
+
+tar -xzvf db-4.8.30.NC.tar.gz
+
+cd db-4.8.30.NC/build_unix
+
+Note: Do a static build so that it can be embedded into the executable, instead of having to find a .so at runtime
+../dist/configure --enable-cxx --disable-shared --with-pic --prefix=$BDB_PREFIX
+
+sudo make install
+
+### Instructions for compile: 
+
+git clone  https://github.com/BTA-BATA/BATA-SOURCE bata && cd bata
+
 sudo chmod +777 *
+
 ./autogen.sh
-./configure
+
+./configure LDFLAGS="-L${BDB_PREFIX}/lib/" CPPFLAGS="-I${BDB_PREFIX}/include/" # (other args...)
+
 make
+
+./bata-qt or ./batad
 
 (it will instruct you to make a bata.conf file, so make the bata.conf file and place in the .bata/ folder.)
 

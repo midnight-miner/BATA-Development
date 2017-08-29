@@ -102,6 +102,8 @@ protected:
     int64_t nTargetSpacing;
     int nMinerThreads;
     long nMaxTipAge;
+    int nActivateMasternodes;    // Masternodes activated on Network.
+    int nEnforceAfterBlock1Mil;  // Fee reduction and new features at Block 1 Million
     std::vector<CDNSSeedData> vSeeds;
     std::vector<unsigned char> base58Prefixes[MAX_BASE58_TYPES];
     CBaseChainParams::Network networkID;

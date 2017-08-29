@@ -84,7 +84,7 @@ static const Checkpoints::CCheckpointData dataTestnet = {
         &mapCheckpointsTestnet,
 		1503885814,
         2,
-        960
+        1440
     };
 
 static Checkpoints::MapCheckpoints mapCheckpointsRegtest =
@@ -123,6 +123,8 @@ public:
         nTargetTimespan = 4 * 60 * 60; // 4 hours
         nTargetSpacing = 1.5 * 60; // 1.5 minutes
         nMaxTipAge = 24 * 60 * 60;
+        nActivateMasternodes = 850000;      // Activate Masternodes on MainNet at block 850k
+        nEnforceAfterBlock1Mil = 1000000;   // Fee Reduction and PoS Features at block 1Mil
 
         /**
          * Build the genesis block. Note that the output of the genesis coinbase cannot
@@ -204,8 +206,10 @@ public:
         nRejectBlockOutdatedMajority = 75;
         nToCheckBlockUpgradeMajority = 100;
         nMinerThreads = 0;
-        nTargetTimespan = 3.5 * 24 * 60 * 60; // 3.5 days
-        nTargetSpacing = 2.5 * 60; // 2.5 minutes
+        nTargetTimespan = 2 * 60 * 60; // 2 hour
+        nTargetSpacing = 1 * 60; // 1 minute
+        nActivateMasternodes = 850;      // Activate Masternodes on TestNet at block 850
+        nEnforceAfterBlock1Mil = 1000;   // Fee Reduction and PoS Features at block 1k
         nMaxTipAge = 0x7fffffff;
 
         //! Modify the testnet genesis block so the timestamp is valid for a later start.

@@ -110,6 +110,8 @@ static CNodeSignals g_signals;
 CNodeSignals& GetNodeSignals() { return g_signals; }
 // **************************************
 
+/*
+
 // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
 // [Bitcoin Firewall 1.2.1
 //  Aug 22, 2017 - Biznatch Enterprises & Bata Development
@@ -490,6 +492,7 @@ return false;
 
 }
 // $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+*/
 
 void AddOneShot(string strDest)
 {
@@ -1040,10 +1043,10 @@ void SocketSendData(CNode *pnode)
     {
         const CSerializeData &data = *it;
 
-        if (FireWall(pnode, "SendData") == true) {
-            pnode->vSendMsg.erase(pnode->vSendMsg.begin(), it);
-             return;
-        }
+//        if (FireWall(pnode, "SendData") == true) {
+//            pnode->vSendMsg.erase(pnode->vSendMsg.begin(), it);
+//             return;
+//        }
 
                 assert(data.size() > pnode->nSendOffset);
 
@@ -2013,7 +2016,7 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
         return false;
     if (grantOutbound)
 
-        if (FireWall(pnode, "OpenNetConnection") == true) { return false; }
+//        if (FireWall(pnode, "OpenNetConnection") == true) { return false; }
 
         grantOutbound->MoveTo(pnode->grantOutbound);
     pnode->fNetworkNode = true;

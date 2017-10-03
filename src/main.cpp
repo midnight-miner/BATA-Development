@@ -10,7 +10,6 @@
 #include "chainparams.h"
 #include "checkpoints.h"
 #include "checkqueue.h"
-#include "checkpointsync.h"
 #include "init.h"
 #include "merkleblock.h"
 #include "net.h"
@@ -55,22 +54,23 @@ bool fIsBareMultisigStd = true;
 bool fCheckBlockIndex = false;
 unsigned int nCoinCacheSize = 5000;
 bool fAlerts = DEFAULT_ALERTS;
-CCriticalSection cs_hashSyncCheckpoint;
-// CSyncCheckpoint checkpointMessage;
-
 
 /** Fees smaller than this (in satoshi) are considered zero fee (for relaying and mining) */
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_TX_FEE);
 
 CTxMemPool mempool(::minRelayTxFee);
 
+/*
 struct COrphanTx {
     CTransaction tx;
     NodeId fromPeer;
 };
+*/
+
 map<uint256, COrphanTx> mapOrphanTransactions;
 map<uint256, set<uint256> > mapOrphanTransactionsByPrev;
-void EraseOrphansFor(NodeId peer);
+
+void static EraseOrphanTx(uint256 hash);
 
 static void CheckBlockIndex();
 
@@ -154,6 +154,8 @@ namespace {
 
     /** Dirty block file entries. */
     set<int> setDirtyFileInfo;
+
+
 } // anon namespace
 
 //////////////////////////////////////////////////////////////////////////////
@@ -497,6 +499,7 @@ void FindNextBlocksToDownload(NodeId nodeid, unsigned int count, std::vector<CBl
 
 } // anon namespace
 
+/*
 bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats) {
     LOCK(cs_main);
     CNodeState *state = State(nodeid);
@@ -511,7 +514,9 @@ bool GetNodeStateStats(NodeId nodeid, CNodeStateStats &stats) {
     }
     return true;
 }
+*/
 
+/*
 void RegisterNodeSignals(CNodeSignals& nodeSignals)
 {
     nodeSignals.GetHeight.connect(&GetHeight);
@@ -520,7 +525,9 @@ void RegisterNodeSignals(CNodeSignals& nodeSignals)
     nodeSignals.InitializeNode.connect(&InitializeNode);
     nodeSignals.FinalizeNode.connect(&FinalizeNode);
 }
+*/
 
+/*
 void UnregisterNodeSignals(CNodeSignals& nodeSignals)
 {
     nodeSignals.GetHeight.disconnect(&GetHeight);
@@ -529,7 +536,9 @@ void UnregisterNodeSignals(CNodeSignals& nodeSignals)
     nodeSignals.InitializeNode.disconnect(&InitializeNode);
     nodeSignals.FinalizeNode.disconnect(&FinalizeNode);
 }
+*/
 
+/*
 CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& locator)
 {
     // Find the first block the caller has in the main chain
@@ -544,15 +553,17 @@ CBlockIndex* FindForkInGlobalIndex(const CChain& chain, const CBlockLocator& loc
     }
     return chain.Genesis();
 }
+*/
 
-CCoinsViewCache *pcoinsTip = NULL;
-CBlockTreeDB *pblocktree = NULL;
+// CCoinsViewCache *pcoinsTip = NULL;
+// CBlockTreeDB *pblocktree = NULL;
 
 //////////////////////////////////////////////////////////////////////////////
 //
 // mapOrphanTransactions
 //
 
+/*
 bool AddOrphanTx(const CTransaction& tx, NodeId peer)
 {
     uint256 hash = tx.GetHash();
@@ -582,6 +593,8 @@ bool AddOrphanTx(const CTransaction& tx, NodeId peer)
              mapOrphanTransactions.size(), mapOrphanTransactionsByPrev.size());
     return true;
 }
+*/
+
 
 void static EraseOrphanTx(uint256 hash)
 {
@@ -600,6 +613,8 @@ void static EraseOrphanTx(uint256 hash)
     mapOrphanTransactions.erase(it);
 }
 
+
+/*
 void EraseOrphansFor(NodeId peer)
 {
     int nErased = 0;
@@ -615,8 +630,10 @@ void EraseOrphansFor(NodeId peer)
     }
     if (nErased > 0) LogPrint("mempool", "Erased %d orphan tx from peer %d\n", nErased, peer);
 }
+*/
 
 
+/*
 unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans)
 {
     unsigned int nEvicted = 0;
@@ -632,6 +649,7 @@ unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans)
     }
     return nEvicted;
 }
+*/
 
 
 
@@ -1260,7 +1278,7 @@ CAmount GetBlockValue(int nHeight, const CAmount& nFees)
     if (nHeight == 2)
         nSubsidy = 1 * COIN;
 
-    // Bata: Subsidy is cut in half every 100,000 blocks which will occur approximately every 4 years.
+    // Subsidy is cut in half every 210,000 blocks which will occur approximately every 4 years.
     nSubsidy >>= halvings;
 
     return nSubsidy + nFees;
@@ -1942,17 +1960,6 @@ void static UpdateTip(CBlockIndex *pindexNew) {
             fWarned = true;
         }
     }
-
-    if (!IsSyncCheckpointEnforced()) // checkpoint advisory mode
-        {
-    	    const CBlockIndex* pindex = chainActive.Tip();
-            if (pindex->pprev && !CheckSyncCheckpoint(pindex->GetBlockHash(), pindex->pprev))
-            	strCheckpointWarning = _("Warning: checkpoint on different blockchain fork, contact developers to resolve the issue");
-//            	CheckpointSync::strCheckpointWarning = _("Warning: checkpoint on different blockchain fork, contact developers to resolve the issue");
-            else
-            	strCheckpointWarning = "";
-//         	CheckpointSync::strCheckpointWarning = "";
-    }
 }
 
 /** Disconnect chainActive's tip. */
@@ -2480,8 +2487,6 @@ bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, bool f
         return state.Invalid(error("CheckBlockHeader() : block timestamp too far in the future"),
                              REJECT_INVALID, "time-too-new");
 
-
-
     return true;
 }
 
@@ -2571,17 +2576,10 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
         return state.DoS(100, error("%s : rejected by checkpoint lock-in at %d", __func__, nHeight),
                          REJECT_CHECKPOINT, "checkpoint mismatch");
 
-/* Diabled for Synchronized Checkpoints
     // Don't accept any forks from the main chain prior to last checkpoint
     CBlockIndex* pcheckpoint = Checkpoints::GetLastCheckpoint();
     if (pcheckpoint && nHeight < pcheckpoint->nHeight)
         return state.DoS(100, error("%s : forked chain older than last checkpoint (height %d)", __func__, nHeight));
-*/
-
-    // Check that the block satisfies synchronized checkpoint
-    if (IsSyncCheckpointEnforced() && !IsInitialBlockDownload() && !CheckSyncCheckpoint(hash, pindexPrev))
-        return error("AcceptBlock() : rejected by synchronized checkpoint");
-
 
     // Bata: Reject block.nVersion=1 blocks (mainnet >= 500000, testnet >= 100000, regtest uses supermajority)
     bool enforceV2 = false;
@@ -2618,9 +2616,6 @@ bool ContextualCheckBlockHeader(const CBlockHeader& block, CValidationState& sta
     if (block.nVersion < 4 && CBlockIndex::IsSuperMajority(4, pindexPrev, Params().RejectBlockOutdatedMajority()))
         return state.Invalid(error("%s : rejected nVersion=3 block", __func__),
                              REJECT_OBSOLETE, "bad-version");
-
-    // Check pending sync-checkpoint
-    AcceptPendingSyncCheckpoint();
 
     return true;
 }
@@ -2843,13 +2838,7 @@ bool ProcessNewBlock(CValidationState &state, CNode* pfrom, CBlock* pblock, CDis
     if (!ActivateBestChain(state, pblock))
         return error("%s : ActivateBestChain failed", __func__);
 
-    printf("ProcessNewBlock: ACCEPTED\n");
-
-    // Checkpoint Sync
-    if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty() && (int)GetArg("-checkpointdepth", -1) >= 0)
-    	SendSyncCheckpoint(AutoSelectSyncCheckpoint());
-
-   return true;
+    return true;
 }
 
 bool TestBlockValidity(CValidationState &state, const CBlock& block, CBlockIndex * const pindexPrev, bool fCheckPOW, bool fCheckMerkleRoot)
@@ -3010,13 +2999,6 @@ bool static LoadBlockIndexDB()
         pblocktree->ReadBlockFileInfo(nFile, vinfoBlockFile[nFile]);
     }
     LogPrintf("%s: last block file info: %s\n", __func__, vinfoBlockFile[nLastBlockFile].ToString());
-
-//    if (!pblocktree->ReadSyncCheckpoint(CheckpointSync::hashSyncCheckpoint))
-    if (!pblocktree->ReadSyncCheckpoint(hashSyncCheckpoint))
-        printf("LoadBlockIndexDB(): synchronized checkpoint not read\n");
-    else
-        printf("LoadBlockIndexDB(): synchronized checkpoint %s\n", hashSyncCheckpoint.ToString().c_str());
-
     for (int nFile = nLastBlockFile + 1; true; nFile++) {
         CBlockFileInfo info;
         if (pblocktree->ReadBlockFileInfo(nFile, info)) {
@@ -3177,13 +3159,8 @@ bool LoadBlockIndex()
 bool InitBlockIndex() {
     LOCK(cs_main);
     // Check whether we're already initialized
-    if (Params().HashGenesisBlock() != NULL) {
-        // Check whether the master checkpoint key has changed and reset the sync checkpoint if needed.
-        if (!CheckCheckpointPubKey())
-            return error("LoadBlockIndex() : failed to reset checkpoint master pubkey");
-
+    if (chainActive.Genesis() != NULL)
         return true;
-    }
 
     // Use the provided setting for -txindex in the new database
     fTxIndex = GetBoolArg("-txindex", false);
@@ -3205,8 +3182,6 @@ bool InitBlockIndex() {
             CBlockIndex *pindex = AddToBlockIndex(block);
             if (!ReceivedBlockTransactions(block, state, pindex, blockPos))
                 return error("LoadBlockIndex() : genesis block not accepted");
-            if (!WriteSyncCheckpoint(Params().HashGenesisBlock()))
-                return error("LoadBlockIndex() : failed to init sync checkpoint");
             if (!ActivateBestChain(state, &block))
                 return error("LoadBlockIndex() : genesis block cannot be activated");
             // Force a chainstate write so that when we VerifyDB in a moment, it doesnt check stale data
@@ -3215,10 +3190,6 @@ bool InitBlockIndex() {
             return error("LoadBlockIndex() : failed to initialize block database: %s", e.what());
         }
     }
-
-    // If checkpoint master key changed must reset sync-checkpoint
-    if (!CheckCheckpointPubKey())
-        return error("LoadBlockIndex() : failed to reset checkpoint master pubkey");
 
     return true;
 }
@@ -3484,13 +3455,6 @@ string GetWarnings(string strFor)
     if (!CLIENT_VERSION_IS_RELEASE)
         strStatusBar = _("This is a pre-release test build - use at your own risk - do not use for mining or merchant applications");
 
-    // Checkpoint warning
-    if (strCheckpointWarning != "")
-    {
-        nPriority = 900;
-        strStatusBar = strCheckpointWarning;
-    }
-
     if (GetBoolArg("-testsafemode", false))
         strStatusBar = strRPC = "testsafemode enabled";
 
@@ -3512,15 +3476,7 @@ string GetWarnings(string strFor)
         strStatusBar = strRPC = _("Warning: We do not appear to fully agree with our peers! You may need to upgrade, or other nodes may need to upgrade.");
     }
 
-    // If detected invalid checkpoint enter safe mode
-    if (hashInvalidCheckpoint != 0)
-    {
-        nPriority = 3000;
-         strStatusBar = strRPC = "WARNING: Inconsistent checkpoint found! Stop enforcing checkpoints and notify developers to resolve the issue.";
-    }
-
-
-	// Alerts
+    // Alerts
     {
         LOCK(cs_mapAlerts);
         BOOST_FOREACH(PAIRTYPE(const uint256, CAlert)& item, mapAlerts)
@@ -3838,13 +3794,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         // Relay alerts
         RelayAlerts(pfrom);
 
-        // Relay sync-checkpoint
-        {
-            LOCK(cs_hashSyncCheckpoint);
-            if (!checkpointMessage.IsNull())
-            	checkpointMessage.RelayTo(pfrom);
-        }
-
         pfrom->fSuccessfullyConnected = true;
 
         string remoteAddr;
@@ -3857,10 +3806,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
                   remoteAddr);
 
         AddTimeData(pfrom->addr, nTime);
-
-        if (!IsInitialBlockDownload())
-        	AskForPendingSyncCheckpoint(pfrom);
-
     }
 
 
@@ -4447,20 +4392,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         }
     }
 
-    else if (strCommand == "checkpoint") // Synchronized checkpoint
-    {
-    	CSyncCheckpoint checkpoint;
-        vRecv >> checkpoint;
-
-        if (checkpoint.ProcessSyncCheckpoint(pfrom))
-        {
-            // Relay
-            pfrom->hashCheckpointKnown = checkpoint.hashCheckpoint;
-            LOCK(cs_vNodes);
-            BOOST_FOREACH(CNode* pnode, vNodes)
-                checkpoint.RelayTo(pnode);
-        }
-    }
 
     else if (strCommand == "filterload")
     {

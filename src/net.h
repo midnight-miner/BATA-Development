@@ -18,6 +18,7 @@
 #include "sync.h"
 #include "uint256.h"
 #include "utilstrencodings.h"
+#include "coins.h"
 
 #include <deque>
 #include <stdint.h>
@@ -33,6 +34,8 @@
 class CAddrMan;
 class CBlockIndex;
 class CNode;
+
+class CBlockTreeDB;
 
 namespace boost {
     class thread_group;
@@ -154,6 +157,10 @@ struct LocalServiceInfo {
 extern CCriticalSection cs_mapLocalHost;
 extern std::map<CNetAddr, LocalServiceInfo> mapLocalHost;
 
+/** Best header we've seen so far (used for getheaders queries' starting points). */
+extern CBlockIndex *pindexBestHeader;
+
+
 class CNodeStats
 {
 public:
@@ -216,9 +223,21 @@ public:
     int readData(const char *pch, unsigned int nBytes);
 };
 
+struct COrphanTx {
+    CTransaction tx;
+    NodeId fromPeer;
+};
 
 
+//////////////////////////////////////////////////////////////////////////////
+//
+// mapOrphanTransactions
+//
 
+bool AddOrphanTx(const CTransaction& tx, NodeId peer);
+void static EraseOrphanTx(uint256 hash);
+void EraseOrphansFor(NodeId peer);
+unsigned int LimitOrphanTxSize(unsigned int nMaxOrphans);
 
 /** Information about a peer */
 class CNode
@@ -263,7 +282,6 @@ public:
     bool fNetworkNode;
     bool fSuccessfullyConnected;
     bool fDisconnect;
-
     // We use fRelayTxes for two purposes -
     // a) it allows us to not relay tx invs before receiving the peer's version message
     // b) the peer may tell us in their version message that we should not relay tx invs
@@ -297,7 +315,6 @@ public:
     mruset<CAddress> setAddrKnown;
     bool fGetAddr;
     std::set<uint256> setKnown;
-    uint256 hashCheckpointKnown;
 
     // inventory based relay
     mruset<CInv> setInventoryKnown;
@@ -633,5 +650,13 @@ public:
     bool Write(const CAddrMan& addr);
     bool Read(CAddrMan& addr);
 };
+
+/** Global variable that points to the active CCoinsView (protected by cs_main) */
+ extern CCoinsViewCache *pcoinsTip;
+
+/** Global variable that points to the active block tree (protected by cs_main) */
+ extern CBlockTreeDB *pblocktree;
+
+
 
 #endif // BITCOIN_NET_H

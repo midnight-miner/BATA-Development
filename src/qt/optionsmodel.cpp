@@ -1,9 +1,11 @@
 // Copyright (c) 2011-2014 The Bitcoin developers
+// Copyright (c) 2014-2015 The Dash developers
+// Copyright (c) 2015-2017 The Bata developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #if defined(HAVE_CONFIG_H)
-#include "config/bitcoin-config.h"
+#include "config/bata-config.h"
 #endif
 
 #include "optionsmodel.h"
@@ -40,6 +42,7 @@ void OptionsModel::addOverriddenOption(const std::string &option)
 // Writes all missing QSettings with their default values
 void OptionsModel::Init()
 {
+    resetSettings = false;
     QSettings settings;
 
     // Ensure restart flag is unset on client startup
@@ -68,6 +71,18 @@ void OptionsModel::Init()
     if (!settings.contains("fCoinControlFeatures"))
         settings.setValue("fCoinControlFeatures", false);
     fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
+
+    if (!settings.contains("nObfuscationRounds"))
+        settings.setValue("nObfuscationRounds", 2);
+
+    if (!settings.contains("nAnonymizeCoinAmount"))
+        settings.setValue("nAnonymizeCoinAmount", 1000);
+
+    nObfuscationRounds = settings.value("nObfuscationRounds").toLongLong();
+    nAnonymizeCoinAmount = settings.value("nAnonymizeCoinAmount").toLongLong();
+
+//    if (!settings.contains("fShowMasternodesTab"))
+//        settings.setValue("fShowMasternodesTab", masternodeConfig.getCount());
 
     // These are shared with the core or have a command-line parameter
     // and we want command-line parameters to overwrite the GUI settings.
@@ -118,10 +133,19 @@ void OptionsModel::Init()
         addOverriddenOption("-proxy");
 
     // Display
+    if (!settings.contains("digits"))
+        settings.setValue("digits", "2");
+    if (!settings.contains("theme"))
+        settings.setValue("theme", "");
     if (!settings.contains("language"))
         settings.setValue("language", "");
     if (!SoftSetArg("-lang", settings.value("language").toString().toStdString()))
         addOverriddenOption("-lang");
+
+    if (settings.contains("nObfuscationRounds"))
+        SoftSetArg("-obfuscationrounds", settings.value("nObfuscationRounds").toString().toStdString());
+    if (settings.contains("nAnonymizeCoinAmount"))
+        SoftSetArg("-anonymizebataamount", settings.value("nAnonymizeCoinAmount").toString().toStdString());
 
     language = settings.value("language").toString();
 }
@@ -132,6 +156,7 @@ void OptionsModel::Reset()
 
     // Remove all entries from our QSettings object
     settings.clear();
+    resetSettings = true; // Needed in bata.cpp during shutdown to also remove the window positions
 
     // default setting for OptionsModel::StartAtStartup - disabled
     if (GUIUtil::GetStartOnSystemStartup())
@@ -186,6 +211,10 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return nDisplayUnit;
         case ThirdPartyTxUrls:
             return strThirdPartyTxUrls;
+        case Digits:
+            return settings.value("digits");            
+        case Theme:
+            return settings.value("theme");            
         case Language:
             return settings.value("language");
         case CoinControlFeatures:
@@ -194,6 +223,10 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
             return settings.value("nDatabaseCache");
         case ThreadsScriptVerif:
             return settings.value("nThreadsScriptVerif");
+        case ObfuscationRounds:
+            return QVariant(nObfuscationRounds);
+        case AnonymizeCoinAmount:
+            return QVariant(nAnonymizeCoinAmount);
         case Listen:
             return settings.value("fListen");
         default:
@@ -277,11 +310,33 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
                 setRestartRequired(true);
             }
             break;
+        case Digits:
+            if (settings.value("digits") != value) {
+                settings.setValue("digits", value);
+                setRestartRequired(true);
+            }
+            break;            
+        case Theme:
+            if (settings.value("theme") != value) {
+                settings.setValue("theme", value);
+                setRestartRequired(true);
+            }
+            break;            
         case Language:
             if (settings.value("language") != value) {
                 settings.setValue("language", value);
                 setRestartRequired(true);
             }
+            break;
+        case ObfuscationRounds:
+            nObfuscationRounds = value.toInt();
+            settings.setValue("nObfuscationRounds", nObfuscationRounds);
+            emit obfuscationRoundsChanged(nObfuscationRounds);
+            break;
+        case AnonymizeCoinAmount:
+            nAnonymizeCoinAmount = value.toInt();
+            settings.setValue("nAnonymizeCoinAmount", nAnonymizeCoinAmount);
+            emit anonymizeCoinAmountChanged(nAnonymizeCoinAmount);
             break;
         case CoinControlFeatures:
             fCoinControlFeatures = value.toBool();

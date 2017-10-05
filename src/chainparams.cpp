@@ -1,5 +1,7 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
+// Copyright (c) 2014-2015 The Dash developers
+// Copyright (c) 2015-2017 The Bata developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -26,8 +28,6 @@ struct SeedSpec6 {
 /**
  * Main network
  */
-
-
 
 //! Convert the pnSeeds6 array into usable address objects.
 static void convertSeed6(std::vector<CAddress> &vSeedsOut, const SeedSpec6 *data, unsigned int count)
@@ -82,7 +82,7 @@ static Checkpoints::MapCheckpoints mapCheckpointsTestnet =
         ;
 static const Checkpoints::CCheckpointData dataTestnet = {
         &mapCheckpointsTestnet,
-		1503885814,
+		1503898688,
         2,
         1440
     };
@@ -123,8 +123,15 @@ public:
         nTargetTimespan = 4 * 60 * 60; // 4 hours
         nTargetSpacing = 1.5 * 60; // 1.5 minutes
         nMaxTipAge = 24 * 60 * 60;
+
+        nMasternodeAmount = 10000 * COIN;         // Amount required (exactly) to activate Masternode
         nActivateMasternodes = 850000;      // Activate Masternodes on MainNet at block 850k
         nEnforceAfterBlock1Mil = 1000000;   // Fee Reduction and PoS Features at block 1Mil
+
+        nFirstPOSBlock =  1000000;
+        nFirstMNBlock =    850000;
+        nFirstUBERBlock = 2000000;
+        nLastPOWBlock =   2000000;
 
         /**
          * Build the genesis block. Note that the output of the genesis coinbase cannot
@@ -177,6 +184,14 @@ public:
         fSkipProofOfWorkCheck = false;
         fTestnetToBeDeprecatedFieldRPC = false;
 
+        nPoolMaxTransactions = 3;
+//        strSporkKey = "04549ac134f694c0243f503e8c8a9a986f5de6610049c40b07816809b0d1d06a21b07be27b9bb555931773f62ba6cf35a25fd52f694d4e1106ccd237a7bb899fdd";
+        strSporkKey = "e2a578aa170bc53775b50335d11bf3276362b3bd6d32c7856a9d48a1ce0f7e38c3c7a31b479a3c3d7fee0223b35aefaa9b764c6e15b1c8061fdf07fa3a1bb2345c";
+//        strMasternodePaymentsPubKey = "04549ac134f694c0243f503e8c8a9a986f5de6610049c40b07816809b0d1d06a21b07be27b9bb555931773f62ba6cf35a25fd52f694d4e1106ccd237a7bb899fdd";
+        strMasternodePaymentsPubKey = "e2a578aa170bc53775b50335d11bf3276362b3bd6d32c7856a9d48a1ce0f7e38c3c7a31b479a3c3d7fee0223b35aefaa9b764c6e15b1c8061fdf07fa3a1bb2345c";
+        strObfuscationPoolDummyAddress = "B9BiqLLWuBmHy5P1MGuqyeSj9JNG211DTz";
+        nStartMasternodePayments = 1508025600; //Sunday, October 15, 2017 00:00:00 GMT
+
         // Bata: Mainnet v2 enforced as of block 710k
         nEnforceV2AfterHeight = 710000;
     }
@@ -212,6 +227,13 @@ public:
         nEnforceAfterBlock1Mil = 1000;   // Fee Reduction and PoS Features at block 1k
         nMaxTipAge = 0x7fffffff;
 
+        nMasternodeAmount = 1000 * COIN;         // Amount required (exactly) to activate Masternode
+
+        nFirstPOSBlock =  10000;
+        nFirstMNBlock =    2500;
+        nFirstUBERBlock = 20000;
+        nLastPOWBlock =   20000;
+
         //! Modify the testnet genesis block so the timestamp is valid for a later start.
         genesis.nTime = 1503885814;
         genesis.nNonce = 698199;
@@ -235,12 +257,20 @@ public:
 
         fRequireRPCPassword = true;
         fMiningRequiresPeers = true;
-        fAllowMinDifficultyBlocks = true;
+        fAllowMinDifficultyBlocks = false;
         fDefaultConsistencyChecks = false;
         fRequireStandard = false;
         fMineBlocksOnDemand = false;
         fSkipProofOfWorkCheck = false;
         fTestnetToBeDeprecatedFieldRPC = true;
+
+        nPoolMaxTransactions = 2;
+//        strSporkKey = "046f78dcf911fbd61910136f7f0f8d90578f68d0b3ac973b5040fb7afb501b5939f39b108b0569dca71488f5bbf498d92e4d1194f6f941307ffd95f75e76869f0e";
+        strSporkKey = "2a0f30c1a80267e365fa5f34928849f0e3040f2495fed4e73b6e77766f495509718ecc8776214e2853d58936fd02ba0a03bede445c363ef4b5284f97886206a077";
+//        strMasternodePaymentsPubKey = "046f78dcf911fbd61910136f7f0f8d90578f68d0b3ac973b5040fb7afb501b5939f39b108b0569dca71488f5bbf498d92e4d1194f6f941307ffd95f75e76869f0e";
+        strMasternodePaymentsPubKey = "2a0f30c1a80267e365fa5f34928849f0e3040f2495fed4e73b6e77766f495509718ecc8776214e2853d58936fd02ba0a03bede445c363ef4b5284f97886206a077";
+        strObfuscationPoolDummyAddress = "mgHFbhrHq3qsYGtGYixzzCfz2NcBnYCv6g";
+        nStartMasternodePayments = 1420837558; //Fri, 09 Jan 2015 21:05:58 GMT
 
         // Bata: v2 enforced using Bitcoin's supermajority rule
         nEnforceV2AfterHeight = -1;

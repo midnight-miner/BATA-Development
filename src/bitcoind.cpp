@@ -10,6 +10,7 @@
 #include "noui.h"
 #include "ui_interface.h"
 #include "util.h"
+#include "masternodeconfig.h"
 
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/filesystem.hpp>
@@ -21,8 +22,8 @@
  *
  * \section intro_sec Introduction
  *
- * This is the developer documentation of the reference client for an experimental new digital currency called Bitcoin (http://www.bitcoin.org/),
- * which enables instant payments to anyone, anywhere in the world. Bitcoin uses peer-to-peer technology to operate
+ * This is the developer documentation of the reference client for an experimental new digital currency called Bata (http://www.bata.io/),
+ * which enables instant payments to anyone, anywhere in the world. Bata uses peer-to-peer technology to operate
  * with no central authority: managing transactions and issuing money are carried out collectively by the network.
  *
  * The software is a community-driven open source project, released under the MIT license.
@@ -63,7 +64,7 @@ bool AppInit(int argc, char* argv[])
     //
     // Parameters
     //
-    // If Qt is used, parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main()
+    // If Qt is used, parameters/bata.conf are parsed in qt/bata.cpp's main()
     ParseParameters(argc, argv);
 
     // Process help and version before taking care about datadir
@@ -104,6 +105,13 @@ bool AppInit(int argc, char* argv[])
         // Check for -testnet or -regtest parameter (Params() calls are only valid after this clause)
         if (!SelectParamsFromCommandLine()) {
             fprintf(stderr, "Error: Invalid combination of -regtest and -testnet.\n");
+            return false;
+        }
+
+        // parse masternode.conf
+        std::string strErr;
+        if(!masternodeConfig.read(strErr)) {
+            fprintf(stderr,"Error reading masternode configuration file: %s\n", strErr.c_str());
             return false;
         }
 
@@ -179,7 +187,7 @@ int main(int argc, char* argv[])
 {
     SetupEnvironment();
 
-    // Connect bitcoind signal handlers
+    // Connect batad signal handlers
     noui_connect();
 
     return (AppInit(argc, argv) ? 0 : 1);

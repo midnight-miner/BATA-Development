@@ -12,6 +12,8 @@ class CCoinControl
 {
 public:
     CTxDestination destChange;
+    bool useObfuScation;
+    bool useInstantX;
 
     CCoinControl()
     {
@@ -22,6 +24,8 @@ public:
     {
         destChange = CNoDestination();
         setSelected.clear();
+        useInstantX = false;
+        useObfuScation = true;
     }
 
     bool HasSelected() const

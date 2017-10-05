@@ -5,6 +5,7 @@
 
 #include "txdb.h"
 
+#include "main.h"
 #include "pow.h"
 #include "uint256.h"
 
@@ -200,6 +201,7 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 // Construct block index object
                 CBlockIndex* pindexNew = InsertBlockIndex(diskindex.GetBlockHash());
                 pindexNew->pprev          = InsertBlockIndex(diskindex.hashPrev);
+                pindexNew->pnext          = InsertBlockIndex(diskindex.hashNext);
                 pindexNew->nHeight        = diskindex.nHeight;
                 pindexNew->nFile          = diskindex.nFile;
                 pindexNew->nDataPos       = diskindex.nDataPos;
@@ -211,6 +213,12 @@ bool CBlockTreeDB::LoadBlockIndexGuts()
                 pindexNew->nNonce         = diskindex.nNonce;
                 pindexNew->nStatus        = diskindex.nStatus;
                 pindexNew->nTx            = diskindex.nTx;
+
+                if(pindexNew->nHeight <= Params().LAST_POW_BLOCK())
+                {
+                    if (!CheckProofOfWork(pindexNew->GetBlockHash(), pindexNew->nBits))
+                        return error("LoadBlockIndex() : CheckProofOfWork failed: %s", pindexNew->ToString());
+                }
 
                 // Litecoin: Disable PoW Sanity check while loading block index from disk.
                 // We use the sha256 hash for the block index for performance reasons, which is recorded for later use.

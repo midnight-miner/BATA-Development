@@ -1,4 +1,5 @@
-// Copyright (c) 2011-2013 The Bitcoin developers
+// Copyright (c) 2011-2014 The Bitcoin developers
+// Copyright (c) 2015-2017 The Bata developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -123,7 +124,7 @@ void setupAmountWidget(QLineEdit *widget, QWidget *parent)
 
 bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)
 {
-    // return if URI is not valid or is no bitcoin: URI
+    // return if URI is not valid or is no bata: URI
     if(!uri.isValid() || uri.scheme() != QString("bata"))
         return false;
 
@@ -184,13 +185,13 @@ bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)
 
 bool parseBitcoinURI(QString uri, SendCoinsRecipient *out)
 {
-    // Convert bitcoin:// to bitcoin:
+    // Convert bata:// to bata:
     //
-    //    Cannot handle this later, because bitcoin:// will cause Qt to see the part after // as host,
+    //    Cannot handle this later, because bata:// will cause Qt to see the part after // as host,
     //    which will lower-case it (and thus invalidate the address).
     if(uri.startsWith("bata://", Qt::CaseInsensitive))
     {
-        uri.replace(0, 11, "bata:");
+        uri.replace(0, 7, "bata:");
     }
     QUrl uriInstance(uri);
     return parseBitcoinURI(uriInstance, out);
@@ -216,7 +217,7 @@ QString formatBitcoinURI(const SendCoinsRecipient &info)
 
     if (!info.message.isEmpty())
     {
-        QString msg(QUrl::toPercentEncoding(info.message));;
+        QString msg(QUrl::toPercentEncoding(info.message));
         ret += QString("%1message=%2").arg(paramCount == 0 ? "?" : "&").arg(msg);
         paramCount++;
     }
@@ -239,6 +240,7 @@ QString HtmlEscape(const QString& str, bool fMultiLine)
 #else
     QString escaped = str.toHtmlEscaped();
 #endif
+    escaped = escaped.replace(" ", "&nbsp;");
     if(fMultiLine)
     {
         escaped = escaped.replace("\n", "<br>\n");
@@ -386,6 +388,24 @@ void openDebugLogfile()
         QDesktopServices::openUrl(QUrl::fromLocalFile(boostPathToQString(pathDebug)));
 }
 
+void openConfigfile()
+{
+    boost::filesystem::path pathConfig = GetConfigFile();
+
+    /* Open bata.conf with the associated application */
+    if (boost::filesystem::exists(pathConfig))
+        QDesktopServices::openUrl(QUrl::fromLocalFile(boostPathToQString(pathConfig)));
+}
+
+void showBackups()
+{
+    boost::filesystem::path pathBackups = GetDataDir() / "backups";
+
+    /* Open folder with default browser */
+    if (boost::filesystem::exists(pathBackups))
+        QDesktopServices::openUrl(QUrl::fromLocalFile(boostPathToQString(pathBackups)));
+}
+
 void SubstituteFonts(const QString& language)
 {
 #if defined(Q_OS_MAC)
@@ -435,11 +455,14 @@ bool ToolTipToRichTextFilter::eventFilter(QObject *obj, QEvent *evt)
     {
         QWidget *widget = static_cast<QWidget*>(obj);
         QString tooltip = widget->toolTip();
-        if(tooltip.size() > size_threshold && !tooltip.startsWith("<qt") && !Qt::mightBeRichText(tooltip))
+        if(tooltip.size() > size_threshold && !tooltip.startsWith("<qt"))
         {
-            // Envelop with <qt></qt> to make sure Qt detects this as rich text
-            // Escape the current message as HTML and replace \n by <br>
-            tooltip = "<qt>" + HtmlEscape(tooltip, true) + "</qt>";
+            // Escape the current message as HTML and replace \n by <br> if it's not rich text
+            if(!Qt::mightBeRichText(tooltip))
+                tooltip = HtmlEscape(tooltip, true);
+            // Envelop with <qt></qt> to make sure Qt detects every tooltip as rich text
+            // and style='white-space:pre' to preserve line composition
+            tooltip = "<qt style='white-space:pre'>" + tooltip + "</qt>";
             widget->setToolTip(tooltip);
             return true;
         }
@@ -572,7 +595,7 @@ boost::filesystem::path static StartupShortcutPath()
 
 bool GetStartOnSystemStartup()
 {
-    // check for Bitcoin.lnk
+    // check for Bata.lnk
     return boost::filesystem::exists(StartupShortcutPath());
 }
 
@@ -687,7 +710,7 @@ bool SetStartOnSystemStartup(bool fAutoStart)
         boost::filesystem::ofstream optionFile(GetAutostartFilePath(), std::ios_base::out|std::ios_base::trunc);
         if (!optionFile.good())
             return false;
-        // Write a bitcoin.desktop file to the autostart directory:
+        // Write a bata.desktop file to the autostart directory:
         optionFile << "[Desktop Entry]\n";
         optionFile << "Type=Application\n";
         optionFile << "Name=Bata\n";
@@ -709,7 +732,7 @@ bool SetStartOnSystemStartup(bool fAutoStart)
 LSSharedFileListItemRef findStartupItemInList(LSSharedFileListRef list, CFURLRef findUrl);
 LSSharedFileListItemRef findStartupItemInList(LSSharedFileListRef list, CFURLRef findUrl)
 {
-    // loop through the list of startup items and try to find the bitcoin app
+    // loop through the list of startup items and try to find the bata app
     CFArrayRef listSnapshot = LSSharedFileListCopySnapshot(list, NULL);
     for(int i = 0; i < CFArrayGetCount(listSnapshot); i++) {
         LSSharedFileListItemRef item = (LSSharedFileListItemRef)CFArrayGetValueAtIndex(listSnapshot, i);
@@ -743,7 +766,7 @@ bool SetStartOnSystemStartup(bool fAutoStart)
     LSSharedFileListItemRef foundItem = findStartupItemInList(loginItems, bitcoinAppUrl);
 
     if(fAutoStart && !foundItem) {
-        // add bitcoin app to startup item list
+        // add bata app to startup item list
         LSSharedFileListInsertItemURL(loginItems, kLSSharedFileListItemBeforeFirst, NULL, NULL, bitcoinAppUrl, NULL, NULL);
     }
     else if(!fAutoStart && foundItem) {
@@ -780,6 +803,30 @@ void restoreWindowGeometry(const QString& strSetting, const QSize& defaultSize, 
 
     parent->resize(size);
     parent->move(pos);
+}
+
+// Open CSS when configured
+QString loadStyleSheet()
+{
+    QString styleSheet;
+    QSettings settings;
+    QString cssName;
+    QString theme = settings.value("theme", "").toString();
+
+    if(!theme.isEmpty()){
+        cssName = QString(":/css/") + theme; 
+    }
+    else {
+        cssName = QString(":/css/batablue");  
+        settings.setValue("theme", "batablue");
+    }
+    
+    QFile qFile(cssName);      
+    if (qFile.open(QFile::ReadOnly)) {
+        styleSheet = QLatin1String(qFile.readAll());
+    }
+        
+    return styleSheet;
 }
 
 void setClipboard(const QString& str)

@@ -4,7 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifdef HAVE_CONFIG_H
-#include "config/bitcoin-config.h"
+#include "config/bata-config.h"
 #endif
 
 #include "netbase.h"
@@ -41,7 +41,7 @@ static proxyType proxyInfo[NET_MAX];
 static CService nameProxy;
 static CCriticalSection cs_proxyInfos;
 int nConnectTimeout = DEFAULT_CONNECT_TIMEOUT;
-bool fNameLookup = false;
+bool fNameLookup = DEFAULT_NAME_LOOKUP;
 
 static const unsigned char pchIPv4[12] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff };
 
@@ -853,12 +853,14 @@ enum Network CNetAddr::GetNetwork() const
     return NET_IPV6;
 }
 
-std::string CNetAddr::ToStringIP() const
+std::string CNetAddr::ToStringIP(bool fUseGetnameinfo) const
 {
     if (IsTor())
         return EncodeBase32(&ip[6], 10) + ".onion";
     if (IsI2P())
         return EncodeBase32(&ip[6], 10) + ".oc.b32.i2p";
+    if (fUseGetnameinfo)
+    {
     CService serv(*this, 0);
     struct sockaddr_storage sockaddr;
     socklen_t socklen = sizeof(sockaddr);
@@ -866,6 +868,7 @@ std::string CNetAddr::ToStringIP() const
         char name[1025] = "";
         if (!getnameinfo((const struct sockaddr*)&sockaddr, socklen, name, sizeof(name), NULL, 0, NI_NUMERICHOST))
             return std::string(name);
+        }
     }
     if (IsIPv4())
         return strprintf("%u.%u.%u.%u", GetByte(3), GetByte(2), GetByte(1), GetByte(0));
@@ -981,7 +984,7 @@ std::vector<unsigned char> CNetAddr::GetGroup() const
         nBits -= 8;
     }
     if (nBits > 0)
-        vchRet.push_back(GetByte(15 - nStartByte) | ((1 << (8 - nBits)) - 1));
+        vchRet.push_back(GetByte(15 - nStartByte) | ((1 << nBits) - 1));
 
     return vchRet;
 }
@@ -1214,18 +1217,18 @@ std::string CService::ToStringPort() const
     return strprintf("%u", port);
 }
 
-std::string CService::ToStringIPPort() const
+std::string CService::ToStringIPPort(bool fUseGetnameinfo) const
 {
     if (IsIPv4() || IsTor() || IsI2P()) {
-        return ToStringIP() + ":" + ToStringPort();
+        return ToStringIP(fUseGetnameinfo) + ":" + ToStringPort();
     } else {
-        return "[" + ToStringIP() + "]:" + ToStringPort();
+        return "[" + ToStringIP(fUseGetnameinfo) + "]:" + ToStringPort();
     }
 }
 
-std::string CService::ToString() const
+std::string CService::ToString(bool fUseGetnameinfo) const
 {
-    return ToStringIPPort();
+    return ToStringIPPort(fUseGetnameinfo);
 }
 
 void CService::SetPort(unsigned short portIn)

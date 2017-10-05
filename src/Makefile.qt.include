@@ -264,7 +264,12 @@ RES_ICONS = \
   qt/res/icons/tx_mined.png \
   qt/res/icons/unit_bta.png \
   qt/res/icons/unit_mbta.png \
-  qt/res/icons/unit_ubta.png
+  qt/res/icons/unit_ubta.png \
+  qt/res/icons/unit_sats.png \
+  qt/res/icons/unit_tbta.png \
+  qt/res/icons/unit_tmbta.png \
+  qt/res/icons/unit_tubta.png
+  qt/res/icons/unit_tsats.png
 
 BITCOIN_QT_CPP = \
   qt/bitcoinaddressvalidator.cpp \
@@ -322,10 +327,20 @@ endif
 RES_IMAGES = \
   qt/res/images/about.png \
   qt/res/images/splash.png \
-  qt/res/images/splash_testnet.png
+  qt/res/images/splash_testnet.png \
+  qt/res/images/dash_logo_horizontal.png \
+  qt/res/images/drkblue_downArrow.png \
+  qt/res/images/drkblue_downArrow_small.png \
+  qt/res/images/drkblue_upArrow_small.png \
+  qt/res/images/drkblue_leftArrow_small.png \
+  qt/res/images/drkblue_rightArrow_small.png \
+  qt/res/images/drkblue_qtreeview_selected.png \
+  qt/res/images/drkblue_walletFrame_bg.png \
+  qt/res/images/drkblue_walletFrame.png
 
 RES_CSS = \
   qt/res/css/batablue.css
+
 RES_MOVIES = $(wildcard $(srcdir)qt/res/movies/spinner-*.png)
 
 BITCOIN_RC = qt/res/bata-qt-res.rc

@@ -209,7 +209,7 @@ libbitcoin_server_a_SOURCES = \
 # wallet: shared between batad and bata-qt, but only linked
 # when wallet enabled
 
-libbitcoin_wallet_a_CFLAGS = -fPIC
+# libbitcoin_wallet_a_CFLAGS = -fPIC
 libbitcoin_wallet_a_CPPFLAGS = $(BITCOIN_INCLUDES)
 libbitcoin_wallet_a_SOURCES = \
   activemasternode.cpp \

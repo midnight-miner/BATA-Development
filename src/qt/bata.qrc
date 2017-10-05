@@ -61,7 +61,7 @@
     </qresource>	    
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>
-        <file alias="dash_logo_horizontal">res/images/bata1_logo_horizontal.png</file>
+        <file alias="bata_logo_horizontal">res/images/bata_logo_horizontal.png</file>
         <file alias="drkblue_downArrow">res/images/drkblue_downArrow.png</file>
         <file alias="drkblue_downArrow_small">res/images/drkblue_downArrow_small.png</file>
         <file alias="drkblue_upArrow_small">res/images/drkblue_upArrow_small.png</file>

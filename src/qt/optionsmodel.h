@@ -36,11 +36,16 @@ public:
         ProxyPort,              // int
         DisplayUnit,            // BitcoinUnits::Unit
         ThirdPartyTxUrls,       // QString
+        Digits,                 // QString
+        Theme,                  // QString
         Language,               // QString
         CoinControlFeatures,    // bool
         ThreadsScriptVerif,     // int
         DatabaseCache,          // int
         SpendZeroConfChange,    // bool
+        ObfuscationRounds,    // int
+        AnonymizeCoinAmount, //int
+//        ShowMasternodesTab,     // bool
         Listen,                 // bool
         OptionIDRowCount,
     };
@@ -66,6 +71,7 @@ public:
     /* Restart flag helper */
     void setRestartRequired(bool fRequired);
     bool isRestartRequired();
+    bool resetSettings;
 
 private:
     /* Qt-only settings */
@@ -83,6 +89,8 @@ private:
 
 signals:
     void displayUnitChanged(int unit);
+    void obfuscationRoundsChanged(int);
+    void anonymizeCoinAmountChanged(int);
     void coinControlFeaturesChanged(bool);
 };
 

@@ -23,7 +23,7 @@ struct CDNSSeedData {
 
 /**
  * CChainParams defines various tweakable parameters of a given instance of the
- * Bitcoin system. There are three: the main network on which people trade goods
+ * Bata system. There are three: the main network on which people trade goods
  * and services, the public test network which gets reset from time to time and
  * a regression test mode which is intended for private networks only. It has
  * minimal difficulty to ensure that blocks can be found instantly.
@@ -53,6 +53,7 @@ public:
     int EnforceBlockUpgradeMajority() const { return nEnforceBlockUpgradeMajority; }
     int RejectBlockOutdatedMajority() const { return nRejectBlockOutdatedMajority; }
     int ToCheckBlockUpgradeMajority() const { return nToCheckBlockUpgradeMajority; }
+    int MaxReorganizationDepth() const { return nMaxReorganizationDepth; }
 
     /** Used if GenerateBitcoins is called with a negative number of threads */
     int DefaultMinerThreads() const { return nMinerThreads; }
@@ -60,6 +61,8 @@ public:
     bool RequireRPCPassword() const { return fRequireRPCPassword; }
     /** Make miner wait to have peers to avoid wasting work */
     bool MiningRequiresPeers() const { return fMiningRequiresPeers; }
+    /** Headers first syncing is disabled */
+    bool HeadersFirstSyncingActive() const { return fHeadersFirstSyncingActive; };
     /** Default value for -checkmempool and -checkblockindex argument */
     bool DefaultConsistencyChecks() const { return fDefaultConsistencyChecks; }
     /** Allow mining of a min-difficulty block */
@@ -72,6 +75,12 @@ public:
     int64_t TargetSpacing() const { return nTargetSpacing; }
     int64_t Interval() const { return nTargetTimespan / nTargetSpacing; }
     int64_t MaxTipAge() const { return nMaxTipAge; }
+    int64_t MasternodeAmount() const { return nMasternodeAmount; }
+    int FIRST_MN_BLOCK() const { return nFirstMNBlock; }
+    int FIRST_POS_BLOCK() const { return nFirstPOSBlock; }
+    int FIRST_UBER_BLOCK() const { return nFirstUBERBlock; }
+    int LAST_POW_BLOCK() const { return nLastPOWBlock; }
+    int COINBASE_MATURITY() const { return nMaturity; }
     /** Make miner stop after a block is found. In RPC, don't return until nGenProcLimit blocks are generated */
     bool MineBlocksOnDemand() const { return fMineBlocksOnDemand; }
     /** In the future use NetworkIDString() for RPC fields */
@@ -82,6 +91,12 @@ public:
     const std::vector<unsigned char>& Base58Prefix(Base58Type type) const { return base58Prefixes[type]; }
     const std::vector<CAddress>& FixedSeeds() const { return vFixedSeeds; }
     virtual const Checkpoints::CCheckpointData& Checkpoints() const = 0;
+    int PoolMaxTransactions() const { return nPoolMaxTransactions; }
+    std::string SporkKey() const { return strSporkKey; }
+    std::string ObfuscationPoolDummyAddress() const { return strObfuscationPoolDummyAddress; }
+    std::string MasternodePaymentPubKey() const { return strMasternodePaymentsPubKey; }
+    int64_t StartMasternodePayments() const { return nStartMasternodePayments; }
+    CBaseChainParams::Network NetworkID() const { return networkID; }
 
     // Bata: Height to enforce v2 block
     int EnforceV2AfterHeight() const { return nEnforceV2AfterHeight; }
@@ -94,14 +109,21 @@ protected:
     std::vector<unsigned char> vAlertPubKey;
     int nDefaultPort;
     uint256 bnProofOfWorkLimit;
+    int nMaxReorganizationDepth;
     int nSubsidyHalvingInterval;
     int nEnforceBlockUpgradeMajority;
     int nRejectBlockOutdatedMajority;
     int nToCheckBlockUpgradeMajority;
     int64_t nTargetTimespan;
     int64_t nTargetSpacing;
+    int nFirstMNBlock;
+    int nFirstPOSBlock;
+    int nFirstUBERBlock;
+    int nLastPOWBlock;
+    int nMaturity;
     int nMinerThreads;
     long nMaxTipAge;
+    int64_t nMasternodeAmount;   // Masternode Collateral
     int nActivateMasternodes;    // Masternodes activated on Network.
     int nEnforceAfterBlock1Mil;  // Fee reduction and new features at Block 1 Million
     std::vector<CDNSSeedData> vSeeds;
@@ -118,6 +140,12 @@ protected:
     bool fMineBlocksOnDemand;
     bool fSkipProofOfWorkCheck;
     bool fTestnetToBeDeprecatedFieldRPC;
+    bool fHeadersFirstSyncingActive;
+    int nPoolMaxTransactions;
+    std::string strSporkKey;
+    std::string strMasternodePaymentsPubKey;
+    std::string strObfuscationPoolDummyAddress;
+    int64_t nStartMasternodePayments;
 
     // Bata: Height to enforce v2 blocks
     int nEnforceV2AfterHeight;

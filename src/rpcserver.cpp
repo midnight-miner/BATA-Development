@@ -1,5 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
+// Copyright (c) 2015-2017 The Bata developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -262,6 +263,7 @@ static const CRPCCommand vRPCCommands[] =
     { "blockchain",         "getblockcount",          &getblockcount,          true,      false,      false },
     { "blockchain",         "getblock",               &getblock,               true,      false,      false },
     { "blockchain",         "getblockhash",           &getblockhash,           true,      false,      false },
+    { "blockchain",         "getblockheader",         &getblockheader,         false,     false,      false },
     { "blockchain",         "getchaintips",           &getchaintips,           true,      false,      false },
     { "blockchain",         "getdifficulty",          &getdifficulty,          true,      false,      false },
     { "blockchain",         "getmempoolinfo",         &getmempoolinfo,         true,      true,       false },
@@ -306,7 +308,18 @@ static const CRPCCommand vRPCCommands[] =
     { "hidden",             "reconsiderblock",        &reconsiderblock,        true,      true,       false },
     { "hidden",             "setmocktime",            &setmocktime,            true,      false,      false },
 
+    /* Mastenode features */
+    { "masternode",               "masternode",             &masternode,             true,      true,       false },
+    { "masternode",               "masternodelist",         &masternodelist,         true,      true,       false },
+    { "masternode",               "masternodebroadcast",    &masternodebroadcast,    true,      true,       false },
+    { "masternode",               "mnbudget",               &mnbudget,               true,      true,       false },
+    { "masternode",               "mnbudgetvoteraw",        &mnbudgetvoteraw,        true,      true,       false },
+    { "masternode",               "mnfinalbudget",          &mnfinalbudget,          true,      true,       false },
+    { "masternode",               "mnsync",                 &mnsync,                 true,      true,       false },
+    { "masternode",               "spork",                  &spork,                  true,      true,       false },
 #ifdef ENABLE_WALLET
+    { "masternode",               "obfuscation",               &obfuscation,               false,     false,      true  }, /* not threadSafe because of SendMoney */
+
     /* Wallet */
     { "wallet",             "addmultisigaddress",     &addmultisigaddress,     true,      false,      true },
     { "wallet",             "backupwallet",           &backupwallet,           true,      false,      true },
@@ -328,6 +341,7 @@ static const CRPCCommand vRPCCommands[] =
     { "wallet",             "importwallet",           &importwallet,           true,      false,      true },
     { "wallet",             "importaddress",          &importaddress,          true,      false,      true },
     { "wallet",             "keypoolrefill",          &keypoolrefill,          true,      false,      true },
+    { "wallet",             "keepass",                &keepass,                false,     false,      true },
     { "wallet",             "listaccounts",           &listaccounts,           false,     false,      true },
     { "wallet",             "listaddressgroupings",   &listaddressgroupings,   false,     false,      true },
     { "wallet",             "listlockunspent",        &listlockunspent,        false,     false,      true },
@@ -341,12 +355,13 @@ static const CRPCCommand vRPCCommands[] =
     { "wallet",             "sendfrom",               &sendfrom,               false,     false,      true },
     { "wallet",             "sendmany",               &sendmany,               false,     false,      true },
     { "wallet",             "sendtoaddress",          &sendtoaddress,          false,     false,      true },
+    { "wallet",             "sendtoaddressix",        &sendtoaddressix,        false,     false,      true },
     { "wallet",             "setaccount",             &setaccount,             true,      false,      true },
     { "wallet",             "settxfee",               &settxfee,               true,      false,      true },
     { "wallet",             "signmessage",            &signmessage,            true,      false,      true },
     { "wallet",             "walletlock",             &walletlock,             true,      false,      true },
     { "wallet",             "walletpassphrasechange", &walletpassphrasechange, true,      false,      true },
-    { "wallet",             "walletpassphrase",       &walletpassphrase,       true,      false,      true },
+    { "wallet",             "walletpassphrase",       &walletpassphrase,       true,      false,      true }, 
 #endif // ENABLE_WALLET
 };
 
@@ -672,6 +687,7 @@ void StartRPCThreads()
 
             RPCListen(acceptor, *rpc_ssl_context, fUseSSL);
 
+            rpc_acceptors.push_back(acceptor);
             fListening = true;
             rpc_acceptors.push_back(acceptor);
             // If dual IPv6/IPv4 bind successful, skip binding to IPv4 separately
@@ -1003,8 +1019,17 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
                 LOCK(cs_main);
                 result = pcmd->actor(params, false);
             } else {
-                LOCK2(cs_main, pwalletMain->cs_wallet);
+                while (true) {
+                    TRY_LOCK(cs_main, lockMain);
+                    if(!lockMain) { MilliSleep(50); continue; }
+                    while (true) {
+                        TRY_LOCK(pwalletMain->cs_wallet, lockWallet);
+                        if(!lockMain) { MilliSleep(50); continue; }
                 result = pcmd->actor(params, false);
+                        break;
+                    }
+                    break;
+                }
             }
 #else // ENABLE_WALLET
             else {

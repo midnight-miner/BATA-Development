@@ -1,5 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
+// Copyright (c) 2015-2017 The Bata developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -228,8 +229,8 @@ Value listunspent(const Array& params, bool fHelp)
 
             "\nExamples\n"
             + HelpExampleCli("listunspent", "")
-            + HelpExampleCli("listunspent", "6 9999999 \"[\\\"B9BiqLLWuBmHy5P1MGuqyeSj9JNG211DTz\\\",\\\"LbhhnRHHVfP1eUJp1tDNiyeeVsNhFN9Fcw\\\"]\"")
-            + HelpExampleRpc("listunspent", "6, 9999999 \"[\\\"B9BiqLLWuBmHy5P1MGuqyeSj9JNG211DTz\\\",\\\"LbhhnRHHVfP1eUJp1tDNiyeeVsNhFN9Fcw\\\"]\"")
+            + HelpExampleCli("listunspent", "6 9999999 \"[\\\"B9BiqLLWuBmHy5P1MGuqyeSj9JNG211DTz\\\",\\\"BKGW6G4YUdonvWbUSzXoRHNszk5CnRYups\\\"]\"")
+            + HelpExampleRpc("listunspent", "6, 9999999 \"[\\\"B9BiqLLWuBmHy5P1MGuqyeSj9JNG211DTz\\\",\\\"BKGW6G4YUdonvWbUSzXoRHNszk5CnRYups\\\"]\"")
         );
 
     RPCTypeCheck(params, list_of(int_type)(int_type)(array_type));

@@ -10,10 +10,12 @@
 #include "pow.h"
 #include "tinyformat.h"
 #include "uint256.h"
+#include "util.h"
 
 #include <vector>
 
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 
 struct CDiskBlockPos
 {
@@ -101,7 +103,7 @@ public:
     //! pointer to the index of the predecessor of this block
     CBlockIndex* pprev;
 
-    //! pointer to the index of the predecessor of this block
+    //! pointer to the index of the next block
     CBlockIndex* pnext;
 
     //! pointer to the index of some further predecessor of this block
@@ -245,16 +247,6 @@ public:
         return pbegin[(pend - pbegin)/2];
     }
 
-	/*
-	 * Bata: This is a carry over from core 0.8.7 to get CheckpointSync working
-	*/
-/*
-    bool IsInMainChain() const
-        {
-            return (pnext || this == pindexBest);
-    }
-*/
-
     /**
      * Returns true if there are nRequired or more blocks of minVersion or above
      * in the last Params().ToCheckBlockUpgradeMajority() blocks, starting at pstart 
@@ -307,9 +299,11 @@ class CDiskBlockIndex : public CBlockIndex
 {
 public:
     uint256 hashPrev;
+    uint256 hashNext;
 
     CDiskBlockIndex() {
         hashPrev = 0;
+        hashNext = 0;
     }
 
     explicit CDiskBlockIndex(CBlockIndex* pindex) : CBlockIndex(*pindex) {
@@ -336,6 +330,7 @@ public:
         // block header
         READWRITE(this->nVersion);
         READWRITE(hashPrev);
+        READWRITE(hashNext);
         READWRITE(hashMerkleRoot);
         READWRITE(nTime);
         READWRITE(nBits);

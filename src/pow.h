@@ -11,6 +11,7 @@
 class CBlockHeader;
 class CBlockIndex;
 class uint256;
+class arith_uint256;
 
 // Define difficulty retarget algorithms
 enum DiffMode {

@@ -18,7 +18,7 @@
 #include <boost/unordered_map.hpp>
 
 /** 
- * Pruned version of CTransaction: only retains metadata and unspent transaction outputs
+* Pruned version of CTransaction: only retains metadata and unspent transaction outputs
  *
  * Serialized format:
  * - VARINT(nVersion)
@@ -419,7 +419,7 @@ public:
     unsigned int GetCacheSize() const;
 
     /** 
-     * Amount of bitcoins coming in to a transaction
+     * Amount of bata coming in to a transaction
      * Note that lightweight clients may not know anything besides the hash of previous transactions,
      * so may not be able to calculate this.
      *

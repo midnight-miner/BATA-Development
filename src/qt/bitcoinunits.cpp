@@ -3,9 +3,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "bitcoinunits.h"
-
+#include "chainparams.h"
 #include "primitives/transaction.h"
 
+#include <QSettings>
 #include <QStringList>
 
 BitcoinUnits::BitcoinUnits(QObject *parent):
@@ -20,6 +21,7 @@ QList<BitcoinUnits::Unit> BitcoinUnits::availableUnits()
     unitlist.append(BTA);
     unitlist.append(mBTA);
     unitlist.append(uBTA);
+    unitlist.append(sats);
     return unitlist;
 }
 
@@ -30,6 +32,7 @@ bool BitcoinUnits::valid(int unit)
     case BTA:
     case mBTA:
     case uBTA:
+    case sats:
         return true;
     default:
         return false;
@@ -43,29 +46,60 @@ QString BitcoinUnits::id(int unit)
     case BTA: return QString("BTA");
     case mBTA: return QString("mBTA");
     case uBTA: return QString("uBTA");
+    case sats: return QString("sats");
     default: return QString("???");
     }
 }
 
 QString BitcoinUnits::name(int unit)
 {
+    if(Params().NetworkID() == CBaseChainParams::MAIN)
+{
     switch(unit)
     {
     case BTA: return QString("BTA");
     case mBTA: return QString("mBTA");
     case uBTA: return QString::fromUtf8("μBTA");
+    case sats: return QString("sats");
     default: return QString("???");
+        }
+    }
+    else
+    {
+        switch(unit)
+        {
+            case BTA: return QString("tBTA");
+            case mBTA: return QString("mtBTA");
+            case uBTA: return QString::fromUtf8("μtBTA");
+            case sats: return QString("tsats");
+            default: return QString("???");
+        }
     }
 }
 
 QString BitcoinUnits::description(int unit)
 {
+    if(Params().NetworkID() == CBaseChainParams::MAIN)
+    {
     switch(unit)
     {
     case BTA: return QString("Bata");
     case mBTA: return QString("Milli-Bata (1 / 1" THIN_SP_UTF8 "000)");
     case uBTA: return QString("Micro-Bata (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
+    case sats: return QString("Satoshi (1 / 100" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
     default: return QString("???");
+    }
+}
+    else
+    {
+        switch(unit)
+        {
+            case BTA: return QString("TestBata");
+            case mBTA: return QString("Milli-TestBata (1 / 1" THIN_SP_UTF8 "000)");
+            case uBTA: return QString("Micro-TestBata (1 / 1" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
+            case sats: return QString("Satoshi-TestBata (1 / 100" THIN_SP_UTF8 "000" THIN_SP_UTF8 "000)");
+            default: return QString("???");
+        }
     }
 }
 
@@ -76,6 +110,7 @@ qint64 BitcoinUnits::factor(int unit)
     case BTA:  return 100000000;
     case mBTA: return 100000;
     case uBTA: return 100;
+    case sats: return 1;
     default:   return 100000000;
     }
 }
@@ -87,6 +122,7 @@ int BitcoinUnits::decimals(int unit)
     case BTA: return 8;
     case mBTA: return 5;
     case uBTA: return 2;
+    case sats: return 0;
     default: return 0;
     }
 }
@@ -118,6 +154,10 @@ QString BitcoinUnits::format(int unit, const CAmount& nIn, bool fPlus, Separator
         quotient_str.insert(0, '-');
     else if (fPlus && n > 0)
         quotient_str.insert(0, '+');
+
+    if (num_decimals <= 0)
+        return quotient_str;
+
     return quotient_str + QString(".") + remainder_str;
 }
 
@@ -149,6 +189,23 @@ QString BitcoinUnits::formatHtmlWithUnit(int unit, const CAmount& amount, bool p
     return QString("<span style='white-space: nowrap;'>%1</span>").arg(str);
 }
 
+QString BitcoinUnits::floorWithUnit(int unit, const CAmount& amount, bool plussign, SeparatorStyle separators)
+{
+    QSettings settings;
+    int digits = settings.value("digits").toInt();
+
+    QString result = format(unit, amount, plussign, separators);
+    if(decimals(unit) > digits) result.chop(decimals(unit) - digits);
+
+    return result + QString(" ") + name(unit);
+}
+
+QString BitcoinUnits::floorHtmlWithUnit(int unit, const CAmount& amount, bool plussign, SeparatorStyle separators)
+{
+    QString str(floorWithUnit(unit, amount, plussign, separators));
+    str.replace(QChar(THIN_SP_CP), QString(THIN_SP_HTML));
+    return QString("<span style='white-space: nowrap;'>%1</span>").arg(str);
+}
 
 bool BitcoinUnits::parse(int unit, const QString &value, CAmount *val_out)
 {

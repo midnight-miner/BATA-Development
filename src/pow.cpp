@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
+// Copyright (c) 2014-2017 The Bata developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -150,7 +151,7 @@ unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHead
             bnNew = Params().ProofOfWorkLimit();
 
         /// debug print
-    LogPrintf("GetNextWorkRequired RETARGET\n");
+        LogPrintf("GetNextWorkRequired RETARGET at %d\n", pindexLast->nHeight + 1);
         LogPrintf("Params().TargetTimespan() = %d    nActualTimespan = %d\n", Params().TargetTimespan(), nActualTimespan);
         LogPrintf("Before: %08x  %s\n", pindexLast->nBits, bnOld.ToString());
         LogPrintf("After:  %08x  %s\n", bnNew.GetCompact(), bnNew.ToString());
@@ -177,16 +178,17 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits)
     if (Params().SkipProofOfWorkCheck())
        return true;
 
-    bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
+    if ( !(Params().NetworkID() == CBaseChainParams::TESTNET) ) {
+        bnTarget.SetCompact(nBits, &fNegative, &fOverflow);
 
-    // Check range
-    if (fNegative || bnTarget == 0 || fOverflow || bnTarget > Params().ProofOfWorkLimit())
-        return error("CheckProofOfWork() : nBits below minimum work");
+        // Check range
+        if (fNegative || bnTarget == 0 || fOverflow || bnTarget > Params().ProofOfWorkLimit())
+            return error("CheckProofOfWork() : nBits below minimum work");
 
-    // Check proof of work matches claimed amount
-    if (hash > bnTarget)
-        return error("CheckProofOfWork() : hash doesn't match nBits");
-
+        // Check proof of work matches claimed amount
+        if (hash > bnTarget)
+            return error("CheckProofOfWork() : hash doesn't match nBits");
+    }
     return true;
 }
 

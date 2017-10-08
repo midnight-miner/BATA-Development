@@ -106,7 +106,7 @@ CCriticalSection cs_nLastNodeId;
 static CSemaphore *semOutbound = NULL;
 boost::condition_variable messageHandlerCondition;
 
-static list<CNode*> vNodesDisconnected;
+// static list<CNode*> vNodesDisconnected;
 
 // **** Signals for message handling ****
 static CNodeSignals g_signals;
@@ -714,20 +714,6 @@ void ThreadSocketHandler()
     unsigned int nPrevNodeCount = 0;
     while (true)
        {
-                CAddrDB adb;
-                if (!adb.Read(addrman))
-                    LogPrintf("Invalid or missing peers.dat; recreating\n");
-            }
-
-            LogPrintf("Loaded %i addresses from peers.dat  %dms\n",
-                    addrman.size(), GetTimeMillis() - nStart);
-
-            const vector<CDNSSeedData> &vSeeds = Params().DNSSeeds();
-            int found = 0;
-            LogPrintf("Loading addresses from DNS seeds (could take a while)\n");
-
-    BOOST_FOREACH(const CDNSSeedData &seed, vSeeds)
-    {
         //
         // Disconnect nodes
         //
@@ -741,7 +727,6 @@ void ThreadSocketHandler()
                         || (pnode->GetRefCount() <= 0 && pnode->vRecvMsg.empty()
                                 && pnode->nSendSize == 0
                                 && pnode->ssSend.empty())) {
-                }
                     // remove from vNodes
                     vNodes.erase(remove(vNodes.begin(), vNodes.end(), pnode),
                             vNodes.end());
@@ -1012,36 +997,29 @@ void ThreadSocketHandler()
             //
             // Inactivity checking
             //
-
-            if (nTime - pnode->nTimeConnected > IDLE_TIMEOUT) {
-                if (pnode->nLastRecv == 0 || pnode->nLastSend == 0) {
-                    LogPrint("net",
-                            "socket no message in first 60 seconds, %d %d from %d\n",
-                            pnode->nLastRecv != 0, pnode->nLastSend != 0,
-                            pnode->id);
-                    DisconnectIdle = true;
+            int64_t nTime = GetTime();
+            if (nTime - pnode->nTimeConnected > 60)
+            {
+                if (pnode->nLastRecv == 0 || pnode->nLastSend == 0)
+                {
+                    LogPrint("net", "socket no message in first 60 seconds, %d %d from %d\n", pnode->nLastRecv != 0, pnode->nLastSend != 0, pnode->id);
+                    pnode->fDisconnect = true;
                 }
-                if (nTime - pnode->nLastSend > DATA_TIMEOUT) {
-                    LogPrintf("socket sending timeout: %is\n",
-                            nTime - pnode->nLastSend);
-                    DisconnectIdle = true;
-                } else if (nTime - pnode->nLastRecv
-                        > (pnode->nVersion > BIP0031_VERSION ?
-                                TIMEOUT_INTERVAL : 90 * 60)) {
-                    LogPrintf("socket receive timeout: %is\n",
-                            nTime - pnode->nLastRecv);
-                    DisconnectIdle = true;
+                else if (nTime - pnode->nLastSend > TIMEOUT_INTERVAL)
+                {
+                    LogPrintf("socket sending timeout: %is\n", nTime - pnode->nLastSend);
+                    pnode->fDisconnect = true;
                 }
-                if (pnode->nPingNonceSent
-                        && pnode->nPingUsecStart + TIMEOUT_INTERVAL * 1000000
-                                < GetTimeMicros()) {
-                    LogPrintf("ping timeout: %fs\n",
-                            0.000001
-                                    * (GetTimeMicros() - pnode->nPingUsecStart));
-                    DisconnectIdle = true;
+                else if (nTime - pnode->nLastRecv > (pnode->nVersion > BIP0031_VERSION ? TIMEOUT_INTERVAL : 90*60))
+                {
+                    LogPrintf("socket receive timeout: %is\n", nTime - pnode->nLastRecv);
+                    pnode->fDisconnect = true;
                 }
-
-
+                else if (pnode->nPingNonceSent && pnode->nPingUsecStart + TIMEOUT_INTERVAL * 1000000 < GetTimeMicros())
+                {
+                    LogPrintf("ping timeout: %fs\n", 0.000001 * (GetTimeMicros() - pnode->nPingUsecStart));
+                    pnode->fDisconnect = true;
+                }
             }
         }
         {

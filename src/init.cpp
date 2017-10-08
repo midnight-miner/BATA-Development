@@ -192,7 +192,7 @@ void PrepareShutdown()
             FlushStateToDisk();
 
             //record that client took the proper shutdown procedure
-            pblocktree->WriteFlag("shutdown", true);
+//            pblocktree->WriteFlag("shutdown", true);
         }
         delete pcoinsTip;
         pcoinsTip = NULL;
@@ -755,6 +755,7 @@ bool AppInit2(boost::thread_group& threadGroup)
         nScriptCheckThreads = MAX_SCRIPTCHECK_THREADS;
 
     fServer = GetBoolArg("-server", false);
+    setvbuf(stdout, NULL, _IOLBF, 0); /// ***TODO*** do we still need this after -printtoconsole is gone?
 #ifdef ENABLE_WALLET
     bool fDisableWallet = GetBoolArg("-disablewallet", false);
 #endif
@@ -904,9 +905,9 @@ bool AppInit2(boost::thread_group& threadGroup)
 
     int64_t nStart;
 
-#if defined(USE_SSE2)
-    scrypt_detect_sse2();
-#endif
+// #if defined(USE_SSE2)
+//    scrypt_detect_sse2();
+// #endif
 
     // ********************************************************* Step 5: Backup wallet and verify wallet database integrity
 #ifdef ENABLE_WALLET
@@ -1218,7 +1219,7 @@ bool AppInit2(boost::thread_group& threadGroup)
                 }
 
                 // Check for changed -txindex state
-                if (fTxIndex != GetBoolArg("-txindex", false)) {
+                if (fTxIndex != GetBoolArg("-txindex", true)) {
                     strLoadError = _("You need to rebuild the database using -reindex to change -txindex");
                     break;
                 }

@@ -6,13 +6,13 @@
 #ifndef ACTIVEMASTERNODE_H
 #define ACTIVEMASTERNODE_H
 
-#include "init.h"
-#include "key.h"
-#include "masternode.h"
-#include "net.h"
-#include "obfuscation.h"
 #include "sync.h"
+#include "net.h"
+#include "key.h"
+#include "init.h"
 #include "wallet.h"
+#include "obfuscation.h"
+#include "masternode.h"
 
 #define ACTIVE_MASTERNODE_INITIAL 0 // initial state
 #define ACTIVE_MASTERNODE_SYNC_IN_PROCESS 1

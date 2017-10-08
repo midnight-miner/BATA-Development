@@ -268,7 +268,7 @@ RES_ICONS = \
   qt/res/icons/unit_sats.png \
   qt/res/icons/unit_tbta.png \
   qt/res/icons/unit_tmbta.png \
-  qt/res/icons/unit_tubta.png
+  qt/res/icons/unit_tubta.png \
   qt/res/icons/unit_tsats.png
 
 BITCOIN_QT_CPP = \

@@ -33,7 +33,7 @@ class CTxBudgetPayment;
 #define VOTE_YES      1
 #define VOTE_NO       2
 
-static const CAmount PROPOSAL_FEE_TX = (10 * COIN);
+// static const CAmount PROPOSAL_FEE_TX = (10 * COIN);
 static const CAmount BUDGET_FEE_TX = (10 * COIN);
 static const int64_t BUDGET_FEE_CONFIRMATIONS = 10;
 static const int64_t BUDGET_VOTE_UPDATE_MIN = 60 * 60;
@@ -324,8 +324,10 @@ public:
         // the two classes are effectively swapped
         swap(first.strBudgetName, second.strBudgetName);
         swap(first.nBlockStart, second.nBlockStart);
-        first.mapVotes.swap(second.mapVotes);
-        first.vecBudgetPayments.swap(second.vecBudgetPayments);
+//        first.mapVotes.swap(second.mapVotes);
+//        swap(first.mapVotes, second.mapVotes);
+//        first.vecBudgetPayments.swap(second.vecBudgetPayments);
+        swap(first.vecBudgetPayments, second.vecBudgetPayments);
         swap(first.nFeeTXHash, second.nFeeTXHash);
         swap(first.nTime, second.nTime);
     }
@@ -522,7 +524,8 @@ public:
         swap(first.address, second.address);
         swap(first.nTime, second.nTime);
         swap(first.nFeeTXHash, second.nFeeTXHash);
-        first.mapVotes.swap(second.mapVotes);
+//        first.mapVotes.swap(second.mapVotes);
+//        swap(first.mapVotes, second.mapVotes);
     }
 
     CBudgetProposalBroadcast& operator=(CBudgetProposalBroadcast from)

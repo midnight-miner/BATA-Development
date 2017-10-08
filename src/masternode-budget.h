@@ -324,7 +324,7 @@ public:
         // the two classes are effectively swapped
         swap(first.strBudgetName, second.strBudgetName);
         swap(first.nBlockStart, second.nBlockStart);
-        first.mapVotes.swap(second.mapVotes);
+//        first.mapVotes.swap(second.mapVotes);
         first.vecBudgetPayments.swap(second.vecBudgetPayments);
         swap(first.nFeeTXHash, second.nFeeTXHash);
         swap(first.nTime, second.nTime);
@@ -522,7 +522,7 @@ public:
         swap(first.address, second.address);
         swap(first.nTime, second.nTime);
         swap(first.nFeeTXHash, second.nFeeTXHash);
-        first.mapVotes.swap(second.mapVotes);
+//        first.mapVotes.swap(second.mapVotes);
     }
 
     CBudgetProposalBroadcast& operator=(CBudgetProposalBroadcast from)

@@ -5041,19 +5041,16 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         CValidationState state;
         ProcessNewBlock(state, pfrom, &block);
         int nDoS;
-        if (state.IsInvalid(nDoS)) {
-            pfrom->PushMessage("reject", strCommand, state.GetRejectCode(),
-                               state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), inv.hash);
-            if (nDoS > 0) {
-                    TRY_LOCK(cs_main, lockMain);
-                    if(lockMain) Misbehaving(pfrom->GetId(), nDoS);
-<<<<<<< HEAD
-=======
-                }
->>>>>>> branch 'dev-0.10.6' of https://github.com/midnight-miner/BATA-Development.git
-            }
-        }
+			if (state.IsInvalid(nDoS)) {
+				pfrom->PushMessage("reject", strCommand, state.GetRejectCode(),
+								   state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), inv.hash);
+				if (nDoS > 0) {
+						TRY_LOCK(cs_main, lockMain);
+						if(lockMain) Misbehaving(pfrom->GetId(), nDoS);
 
+				}
+			}
+        }
     }
 
 

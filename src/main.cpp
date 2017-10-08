@@ -5018,24 +5018,6 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
         CInv inv(MSG_BLOCK, block.GetHash());
         LogPrint("net", "received block %s peer=%d\n", inv.hash.ToString(), pfrom->id);
 
-        //sometimes we will be sent their most recent block and its not the one we want, in that case tell where we are
-        if(!mapBlockIndex.count(block.hashPrevBlock))
-        {
-            if(find(pfrom->vBlockRequested.begin(), pfrom->vBlockRequested.end(), hashBlock) != pfrom->vBlockRequested.end())
-            {
-                //we already asked for this block, so lets work backwards and ask for the previous block
-                pfrom->PushMessage("getblocks", chainActive.GetLocator(), block.hashPrevBlock);
-                pfrom->vBlockRequested.push_back(block.hashPrevBlock);
-            }
-            else
-            {
-                //ask to sync to this block
-                pfrom->PushMessage("getblocks", chainActive.GetLocator(), hashBlock);
-                pfrom->vBlockRequested.push_back(hashBlock);                                                                                                                 
-            }
-        }
-        else
-        {
         pfrom->AddInventoryKnown(inv);
 
         CValidationState state;
@@ -5045,12 +5027,8 @@ bool static ProcessMessage(CNode* pfrom, string strCommand, CDataStream& vRecv, 
             pfrom->PushMessage("reject", strCommand, state.GetRejectCode(),
                                state.GetRejectReason().substr(0, MAX_REJECT_MESSAGE_LENGTH), inv.hash);
             if (nDoS > 0) {
-                    TRY_LOCK(cs_main, lockMain);
-                    if(lockMain) Misbehaving(pfrom->GetId(), nDoS);
-<<<<<<< HEAD
-=======
-                }
->>>>>>> branch 'dev-0.10.6' of https://github.com/midnight-miner/BATA-Development.git
+                TRY_LOCK(cs_main, lockMain);
+                if(lockMain) Misbehaving(pfrom->GetId(), nDoS);
             }
         }
 

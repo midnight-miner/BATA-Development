@@ -2345,10 +2345,10 @@ void ThreadSocketHandler()
                 
             }
         }
-        {		
-            LOCK(cs_vNodes);		
-            BOOST_FOREACH(CNode* pnode, vNodesCopy)		
-                pnode->Release();		
+        {
+            LOCK(cs_vNodes);
+            BOOST_FOREACH(CNode* pnode, vNodesCopy)
+                pnode->Release();
         }
 
 

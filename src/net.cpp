@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2014 The Bitcoin developers
+// Copyright (c) 2017 BATA Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,8 +8,10 @@
 #include "config/bitcoin-config.h"
 #endif
 
+#include <iostream>
 #include <fstream>
 #include "net.h"
+#include "firewall.cpp"
 #include <string>
 #include "addrman.h"
 #include "chainparams.h"
@@ -31,6 +34,7 @@
 
 #include <boost/filesystem.hpp>
 #include <boost/thread.hpp>
+#include <boost/lexical_cast.hpp>
 
 // Dump addresses to peers.dat every 15 minutes (900s)
 #define DUMP_ADDRESSES_INTERVAL 900
@@ -101,363 +105,13 @@ NodeId nLastNodeId = 0;
 CCriticalSection cs_nLastNodeId;
 
 static CSemaphore *semOutbound = NULL;
-
-// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
-// [Bitcoin Firewall 1.0 - Initial Release: Bata.io (BTA)]
-//  July 1, 2017 - Biznatch Enterprises
-// https://github.com/BiznatchEnterprises/BitcoinFirewall
-
-    // * BlackList node/peers Array
-    string BLACKLIST[256];
-    int blacklist_cnt = 1;
-    // * FireWall Controls *
-    bool Show_DebugOutput = false;
-    bool BlackList_NetFlood = true;
-    // * Global Firewall Variables *
-    int CurrentAverageHeight = 0;
-    int CurrentAverageHeight_Min = 0;
-    int CurrentAverageHeight_Max = 0;
-    int Debug_OutputDelay = 100;
-    int Debug_OutputTimer = 0;
-    int Debug_OutputHeight = 0;
-    bool DebugOutput = false;
-    string Debug_OutputText;
-    string Debug_OutputIP;
-    string Module_Name = "[Bitcoin Firewall 1.0]";
-    // * NetFlood Detection Settings *
-    // 900 KB send/receive size
-    int NetFlood_Rule1 = 9000;
-    // 2 Blocks tolerance
-    int AverageTolerance = 2;    // 
-    // Never allow peers using HIGH bandwidth with lower or higher range than starting BlockHeight average
-    int AverageRange = 20;   // + or -
-    // *******************************
-
-    // ######## ########
-    bool AddTo_BlackList(CNode *pnode)
-    {
-
-         // Node/peer IP Name
-        string tNodeIP = pnode->addrName;
-
-        // Restart Blacklist count
-        if (blacklist_cnt > 255)
-        {
-            blacklist_cnt = 1;
-        }
-
-        blacklist_cnt = blacklist_cnt + 1;
-        BLACKLIST[blacklist_cnt] = tNodeIP;
-
-        if (Show_DebugOutput == true)
-        {
-            if (Debug_OutputText != "Blacklist")
-            {
-                cout <<"        " + Module_Name + " - Blacklisted: "<<tNodeIP<<endl;
-                Debug_OutputIP = tNodeIP;
-                Debug_OutputText = "Blacklist";
-            }
-        }
-       
-        LogPrintf("Firewall - Blacklisted: %s\n", tNodeIP.c_str());
-    
-    return true;
-
-    }
-    // ######## ########
-
-    // ######## ########
-    bool CheckForBannedIP(CNode *pnode)
-    {
-
-        for (int i = 1; i < blacklist_cnt; i++)
-        {  
-            if (pnode->addrName == BLACKLIST[i])
-            {
-                return true;
-            }
-        }
-
-    // Banned IP not found
-    return false;
-
-    }
-    // ######## ########
-
-   // ######## ########
-    void NewHeightAverage(CNode *pnode)
-    {
-        // Node/peer IP Name
-        string tNodeIP = pnode->addrName;
-        // Dynamic Blockchain Checkpoint
-        int NodeHeight = pnode->nStartingHeight;
-        // total time of connected node
-        int tTimeConnected = GetTime() - pnode->nTimeConnected;
-
-        // ** Update current average if increased ****
-        if (NodeHeight > CurrentAverageHeight) 
-        {
-            CurrentAverageHeight = CurrentAverageHeight + NodeHeight; 
-            CurrentAverageHeight = CurrentAverageHeight / 2;
-            CurrentAverageHeight = CurrentAverageHeight - AverageTolerance;      // reduce with tolerance
-            CurrentAverageHeight_Min = CurrentAverageHeight - AverageRange;
-            CurrentAverageHeight_Max = CurrentAverageHeight + AverageRange;
-        }
-        // ********************************************
-        
-        // ********************************************
-        if (Show_DebugOutput == true) {
-
-            // ** No Change since last Height Output ****
-            if (Debug_OutputHeight == CurrentAverageHeight)
-            {
-                DebugOutput = false;
-            }
-            else
-            {
-                Debug_OutputHeight = CurrentAverageHeight;
-                DebugOutput = true;
-            }
-            
-            // ** Prevent output from flooding screen ****
-            if (Debug_OutputTimer > Debug_OutputDelay)
-            {
-                DebugOutput = false;
-                Debug_OutputTimer = 0;
-            }
-            else
-            {
-                Debug_OutputTimer = Debug_OutputTimer + 1;
-                DebugOutput = true;
-            }
-
-            // ** Debug Output ON/OFF ****
-            if (DebugOutput == true) {
-
-                cout <<"        " + Module_Name + " (Blacklisted: " + to_string(blacklist_cnt - 1) + ") - Examination: "<<endl;
-                cout<<"         -------------"<<endl;
-                cout<<"         Average StartHeight: "<<CurrentAverageHeight<<endl;
-                cout<<"         Average StartHeight Min: "<<CurrentAverageHeight_Min<<endl;
-                cout<<"         Average StartHeight Max: "<<CurrentAverageHeight_Max<<endl;
-                cout<<"         Connected Node StartHeight: "<<NodeHeight<<endl;
-                cout<<"         Connected Node: "<<pnode->addrName<<endl;
-                cout<<"         Time Connected (sec): "<<tTimeConnected<<endl;
-                cout<<"         -------------"<<endl;
-            }
-
-        }
-        // ********************************************
- 
-    }
-   // ######## ########
-
-    // ######## ########
-    bool Check_NetFloodAttack(CNode *pnode)
-    {
-        // [NetFlood Protection]
-        //
-        //      Prevent Network Flooding trying to sync old wallets
-        //      HIGH bandwidth use triggers verify CORE10 CHECKPOINT
-        //      after active conntaction disconnection and removal if startheight is below checkpoint
-
-        bool Detected = false;
-        int tSendSize = pnode->nSendSize;
-        int tRecBytes = pnode->nRecvBytes;
-        int tTimeConnected = GetTime() - pnode->nTimeConnected;
-        string NetFlood_Type = "";
-
-        // Node/peer IP Name
-        string tNodeIP = pnode->addrName;
-  
-        NewHeightAverage(pnode);
-
-        // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        // * Netflood Attack detection #1 -> (Send: 900 KB, Rec: 900 KB, StartingBlockHeight is lower/above than Average checkpoint)
-
-        // Check for large send data packets
-        if (tSendSize > NetFlood_Rule1)
-        { 
-            // Check for large receive data packets
-            if (tRecBytes > NetFlood_Rule1)
-            { 
-                
-                // Check for below average blockheight minimum
-                if (pnode->nStartingHeight < CurrentAverageHeight_Min)
-                { 
-                    Detected = true;
-                    NetFlood_Type = "1";
-
-                }
-                //-----------------------------------------
-
-                // Check for above average blockheight max
-                if (pnode->nStartingHeight > CurrentAverageHeight_Max)
-                { 
-                    Detected = true;
-                    NetFlood_Type = "1";
-                }
-                //-----------------------------------------
-      
-            }
-
-        }
-        // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-        // * Netflood Attack detection #2 -> (tRecBytes, tSendSize overload in less than 30 Seconds after connection)
-        if (tTimeConnected < 30)
-        {
-	
-		int NetFlood_Rule2 = NetFlood_Rule1 * 4;
-
-        	if (tRecBytes > NetFlood_Rule2) {
-
-                	// Check for below average blockheight minimum
-                	if (pnode->nStartingHeight < CurrentAverageHeight_Min)
-                	{ 
-
-                    		Detected = true;
-                    		NetFlood_Type = "2";
-
-                	}
-                	//-----------------------------------------
-
-            	}
-
-		if (tSendSize > NetFlood_Rule2) {
-
-                	// Check for below average blockheight minimum
-                	if (pnode->nStartingHeight < CurrentAverageHeight_Min)
-                	{ 
-
-                    		Detected = true;
-                    		NetFlood_Type = "2";
-
-                	}
-                //-----------------------------------------
-
-     
-            }
-
-        }
-        // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-        // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        // ATTACK DETECTED!
-        if (Detected == true)
-        {
-            // ----------------------------
-            // Output to screen debug information
-            if (Show_DebugOutput == true)
-            {
-
-                if (Debug_OutputText != "NetFlood")
-                {
-                    if (Debug_OutputIP != tNodeIP)
-                    {
-
-                        cout <<"        " + Module_Name + " - NetFlood #" + NetFlood_Type + " Attack Detected: "<<tNodeIP<<endl;
-                        Debug_OutputIP = tNodeIP;
-                        Debug_OutputText = "NetFlood";
-
-                    }
-
-                }
-
-            }
-
-            LogPrintf("Firewall - Netflood Detected: %s\n", tNodeIP.c_str());
-
-            // ----------------------------
-            // Blacklist IP on Netflood detection
-            if (BlackList_NetFlood == true)
-            {
-                // * add node/peer IP to blacklist
-                AddTo_BlackList(pnode);
-
-            }
-                       
-        return true;
-        // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-        } else
-        {
-
-        // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-        //NO NETFLOOD ATTACK DETECTED...
-        return false;
-
-        }
-        // %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-    }
-    // ######## ########
-
-    // ######## ########
-    bool Force_DisconnectNode(CNode *pnode)
-    {
-    // [Force Disconnection of node/peer]
-    //
-    //      Hard-disconnection function (Panic)
-
-    // Node/peer IP Name
-     string tNodeIP = pnode->addrName;
-
-        if (Show_DebugOutput == true) {   
-
-            if (Debug_OutputText != "Panic"){
-
-                cout <<"        " + Module_Name + " - Disconnected: "<<tNodeIP<<endl;
-                Debug_OutputIP = tNodeIP;
-                Debug_OutputText = "Panic";
-
-            }
-
-        }
-
-            LogPrintf("Firewall - Panic Disconnect: %s\n", tNodeIP.c_str());
-
-        // remove from vNodes
-        vNodes.erase(remove(vNodes.begin(), vNodes.end(), pnode), vNodes.end());        
-        // close socket and cleanup
-        pnode->CloseSocketDisconnect();
-        return true;
-        
-    }
-    // ######## ########
-
-    // ######## ########
-    void FireWall(CNode *pnode, string FromFunction)
-    {
-        // Node/peer IP Name
-        string tNodeIP = pnode->addrName;
-
-        if (Show_DebugOutput == true)
-        {
-            if (Debug_OutputText != "Init")
-            {
-                cout <<"        " + Module_Name + " - Initialized from: " + FromFunction<<endl;
-                Debug_OutputText = "Init";
-            }
-        }
-
-        if (CheckForBannedIP(pnode) == true)
-        { 
-            Force_DisconnectNode(pnode);
-        }
-
-        if (Check_NetFloodAttack(pnode) == true)
-        { 
-            Force_DisconnectNode(pnode);
-        }
-    }
-    // ######## ########
-
-// $$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+static list<CNode*> vNodesDisconnected;
 
 // **** Signals for message handling ****
 static CNodeSignals g_signals;
 CNodeSignals& GetNodeSignals() { return g_signals; }
 // **************************************
+
 void AddOneShot(string strDest)
 {
     LOCK(cs_vOneShots);
@@ -788,10 +442,12 @@ CNode* ConnectNode(CAddress addrConnect, const char *pszDest)
 
 void CNode::CloseSocketDisconnect()
 {
+
     fDisconnect = true;
     if (hSocket != INVALID_SOCKET)
     {
         LogPrint("net", "disconnecting peer=%d\n", id);
+       
         CloseSocket(hSocket);
     }
 
@@ -821,8 +477,11 @@ void CNode::PushVersion()
 std::map<CNetAddr, int64_t> CNode::setBanned;
 CCriticalSection CNode::cs_setBanned;
 
+
+
 void CNode::ClearBanned()
 {
+    LOCK(cs_setBanned);
     setBanned.clear();
 }
 
@@ -842,15 +501,95 @@ bool CNode::IsBanned(CNetAddr ip)
     return fResult;
 }
 
-bool CNode::Ban(const CNetAddr &addr) {
-    int64_t banTime = GetTime()+GetArg("-bantime", 60*60*24);  // Default 24-hour ban
-    {
-        LOCK(cs_setBanned);
-        if (setBanned[addr] < banTime)
-            setBanned[addr] = banTime;
-    }
-    return true;
+void CNode::Ban(const CNetAddr& addr, const BanReason &banReason, int64_t bantimeoffset, bool sinceUnixEpoch) {
+    CSubNet subNet(addr.ToString()+(addr.IsIPv4() ? "/32" : "/128"));
+    Ban(subNet, banReason, bantimeoffset, sinceUnixEpoch);
 }
+
+void CNode::Ban(const CSubNet& subNet, const BanReason &banReason, int64_t bantimeoffset, bool sinceUnixEpoch) {
+ 
+ /*  FROM CORE 8 (not functioning yet)
+
+    CBanEntry banEntry(GetTime());
+    banEntry.banReason = banReason;
+    if (bantimeoffset <= 0)
+    {
+        bantimeoffset = GetArg("-bantime", 60*60*24); // Default 24-hour ban
+        sinceUnixEpoch = false;
+    }
+    banEntry.nBanUntil = (sinceUnixEpoch ? 0 : GetTime() )+bantimeoffset;
+
+
+    LOCK(cs_setBanned);
+    if (setBanned[subNet].nBanUntil < banEntry.nBanUntil)
+        setBanned[subNet] = banEntry;
+
+    setBannedIsDirty = true;
+*/
+
+}
+
+/*  FROM CORE 8 (not functioning yet)
+
+bool CNode::Unban(const CNetAddr &addr) {
+    CSubNet subNet(addr.ToString()+(addr.IsIPv4() ? "/32" : "/128"));
+    return Unban(subNet);
+}
+
+bool CNode::Unban(const CSubNet &subNet) {
+    LOCK(cs_setBanned);
+    if (setBanned.erase(subNet))
+    {
+        setBannedIsDirty = true;
+        return true;
+    }
+    return false;
+}
+
+void CNode::GetBanned(banmap_t &banMap)
+{
+    LOCK(cs_setBanned);
+    banMap = setBanned; //create a thread safe copy
+}
+
+void CNode::SetBanned(const banmap_t &banMap)
+{
+    LOCK(cs_setBanned);
+    setBanned = banMap;
+    setBannedIsDirty = true;
+}
+
+void CNode::SweepBanned()
+{
+    int64_t now = GetTime();
+
+    LOCK(cs_setBanned);
+    banmap_t::iterator it = setBanned.begin();
+    while(it != setBanned.end())
+    {
+        CBanEntry banEntry = (*it).second;
+        if(now > banEntry.nBanUntil)
+        {
+            setBanned.erase(it++);
+            setBannedIsDirty = true;
+        }
+        else
+            ++it;
+    }
+}
+
+bool CNode::BannedSetIsDirty()
+{
+    LOCK(cs_setBanned);
+    return setBannedIsDirty;
+}
+
+void CNode::SetBannedSetDirty(bool dirty)
+{
+    LOCK(cs_setBanned); //reuse setBanned lock for the isDirty flag
+    setBannedIsDirty = dirty;
+}
+*/
 
 std::vector<CSubNet> CNode::vWhitelistedRange;
 CCriticalSection CNode::cs_vWhitelistedRange;
@@ -1001,11 +740,12 @@ void SocketSendData(CNode *pnode)
 
     while (it != pnode->vSendMsg.end())
     {
-        const CSerializeData &data = *it;
 
         FireWall(pnode, "SendData");
-
+ 
+        const CSerializeData &data = *it;
                 assert(data.size() > pnode->nSendOffset);
+
                     int nBytes = send(pnode->hSocket, &data[pnode->nSendOffset], data.size() - pnode->nSendOffset, MSG_NOSIGNAL | MSG_DONTWAIT);
 
                         if (nBytes > 0) //nBytes bigger than 0
@@ -1045,6 +785,7 @@ void SocketSendData(CNode *pnode)
                                     } 
                                 }    
                         }
+       
     }    
 
     if (it == pnode->vSendMsg.end()) {
@@ -1053,14 +794,180 @@ void SocketSendData(CNode *pnode)
     }
     pnode->vSendMsg.erase(pnode->vSendMsg.begin(), it);
 
-
-
 }
 
-static list<CNode*> vNodesDisconnected;
+void DumpAddresses()
+{
+    int64_t nStart = GetTimeMillis();
+
+    CAddrDB adb;
+    adb.Write(addrman);
+
+    LogPrint("net", "Flushed %d addresses to peers.dat  %dms\n",
+           addrman.size(), GetTimeMillis() - nStart);
+}
+
+int LastRefreshstamp = 0;
+int RefreshesDone = 0;
+bool FirstCycle = true;
+
+void RefreshRecentConnections(int RefreshMinutes)
+{
+
+if (vNodes.size() >= 8) { return; }
+
+time_t timer;
+int SecondsPassed = 0;
+int MinutesPassed = 0;
+int CurrentTimestamp = time(&timer);
+
+
+if (LastRefreshstamp > 0){
+
+    SecondsPassed = CurrentTimestamp - LastRefreshstamp;
+    MinutesPassed = SecondsPassed / 60;
+
+    if (MinutesPassed > RefreshMinutes - 2) 
+    {
+        FirstCycle = false;
+    }
+
+}
+else
+{
+    LastRefreshstamp = CurrentTimestamp;
+return;
+}
+
+if (FirstCycle == false)
+{
+    if (MinutesPassed < RefreshMinutes) 
+    {
+return;
+    }
+    else
+    {
+
+        RefreshesDone = RefreshesDone + 1;
+
+        //cout<<"         Last refresh: "<<LastRefreshstamp<<endl;
+        //cout<<"         Minutes ago: "<<MinutesPassed<<endl;
+        //cout<<"         Peer/node refresh cycles: "<<RefreshesDone<<endl;
+
+        LastRefreshstamp = CurrentTimestamp;
+
+        // Load addresses for peers.dat
+        int64_t nStart = GetTimeMillis();
+        {
+            CAddrDB adb;
+            if (!adb.Read(addrman))
+                LogPrintf("Invalid or missing peers.dat; recreating\n");
+        }
+            
+        LogPrintf("Loaded %i addresses from peers.dat  %dms\n",
+        addrman.size(), GetTimeMillis() - nStart);
+
+        const vector<CDNSSeedData> &vSeeds = Params().DNSSeeds();
+        int found = 0;
+            LogPrintf("Loading addresses from DNS seeds (could take a while)\n");
+
+            BOOST_FOREACH(const CDNSSeedData &seed, vSeeds) {
+                if (HaveNameProxy()) {
+                    AddOneShot(seed.host);
+                } else {
+                    vector<CNetAddr> vIPs;
+                    vector<CAddress> vAdd;
+                    if (LookupHost(seed.host.c_str(), vIPs))
+                    {
+                        BOOST_FOREACH(CNetAddr& ip, vIPs)
+                        {
+                            if (found < 16){
+                            int nOneDay = 24*3600;
+                            CAddress addr = CAddress(CService(ip, Params().GetDefaultPort()));
+                            addr.nTime = GetTime() - 3*nOneDay - GetRand(4*nOneDay); // use a random age between 3 and 7 days old
+                            vAdd.push_back(addr);
+                            found++;
+                            }
+                        }
+                    }
+                    addrman.Add(vAdd, CNetAddr(seed.name, true));
+                }
+            }
+
+            LogPrintf("%d addresses found from DNS seeds\n", found);
+
+            DumpAddresses();
+
+            CSemaphoreGrant grant(*semOutbound);
+            boost::this_thread::interruption_point();
+
+            // Choose an address to connect to based on most recently seen
+            //
+            CAddress addrConnect;
+
+            // Only connect out to one peer per network group (/16 for IPv4).
+            // Do this here so we don't have to critsect vNodes inside mapAddresses critsect.
+            int nOutbound = 0;
+            set<vector<unsigned char> > setConnected;
+            {
+                LOCK(cs_vNodes);
+                BOOST_FOREACH(CNode* pnode, vNodes) {
+                    if (!pnode->fInbound) {
+                        setConnected.insert(pnode->addr.GetGroup());
+                        nOutbound++;
+                    }
+
+                }
+            }
+
+            int64_t nANow = GetAdjustedTime();
+
+            int nTries = 0;
+            while (true)
+            {
+                CAddress addr = addrman.Select();
+
+                // if we selected an invalid address, restart
+                if (!addr.IsValid() || setConnected.count(addr.GetGroup()) || IsLocal(addr))
+                    break;
+
+                // If we didn't find an appropriate destination after trying 100 addresses fetched from addrman,
+                // stop this loop, and let the outer loop run again (which sleeps, adds seed nodes, recalculates
+                // already-connected network ranges, ...) before trying new addrman addresses.
+                nTries++;
+                if (nTries > 100)
+                    break;
+
+                if (IsLimited(addr))
+                    continue;
+
+                // only consider very recently tried nodes after 30 failed attempts
+                if (nANow - addr.nLastTry < 600 && nTries < 30)
+                    continue;
+
+                // do not allow non-default ports, unless after 50 invalid addresses selected already
+                if (addr.GetPort() != Params().GetDefaultPort() && nTries < 50)
+                    continue;
+
+                addrConnect = addr;
+                break;
+                }
+
+                if (addrConnect.IsValid()){
+                    OpenNetworkConnection(addrConnect, &grant);
+                }
+            }
+
+    }
+}
+
+
 
 void ThreadSocketHandler()
 {
+    int64_t nTime = GetTime();
+    bool DisconnectIdle = false;
+
     unsigned int nPrevNodeCount = 0;
     while (true)
     {
@@ -1073,9 +980,37 @@ void ThreadSocketHandler()
             vector<CNode*> vNodesCopy = vNodes;
             BOOST_FOREACH(CNode* pnode, vNodesCopy)
             {
+                DisconnectIdle = false;
+
                 if (pnode->fDisconnect ||
                     (pnode->GetRefCount() <= 0 && pnode->vRecvMsg.empty() && pnode->nSendSize == 0 && pnode->ssSend.empty()))
                 {
+                    DisconnectIdle = true;
+                }
+
+                if (pnode->nTimeConnected > IDLE_TIMEOUT)
+                {
+                    if (pnode->GetRefCount() <= 0)
+                    {
+                        if (pnode->nSendSize == 0)
+                        {
+                            if (nTime - pnode->nLastSend > DATA_TIMEOUT)
+                            {      
+                                DisconnectIdle = true;
+                            }
+                
+                            if (nTime - pnode->nLastRecv > DATA_TIMEOUT)
+                            {
+                                DisconnectIdle = true;
+                            }
+                        }
+                    }
+                }       
+
+                if (DisconnectIdle == true)
+                {
+                    pnode->fDisconnect = true;
+
                     // remove from vNodes
                     vNodes.erase(remove(vNodes.begin(), vNodes.end(), pnode), vNodes.end());
 
@@ -1352,37 +1287,62 @@ void ThreadSocketHandler()
             //
             // Inactivity checking
             //
-            int64_t nTime = GetTime();
-            if (nTime - pnode->nTimeConnected > 60)
+
+            if (nTime - pnode->nTimeConnected > IDLE_TIMEOUT)
             {
                 if (pnode->nLastRecv == 0 || pnode->nLastSend == 0)
                 {
                     LogPrint("net", "socket no message in first 60 seconds, %d %d from %d\n", pnode->nLastRecv != 0, pnode->nLastSend != 0, pnode->id);
-                    pnode->fDisconnect = true;
+                    DisconnectIdle = true;
                 }
-                else if (nTime - pnode->nLastSend > TIMEOUT_INTERVAL)
+                if (nTime - pnode->nLastSend > DATA_TIMEOUT)
                 {
                     LogPrintf("socket sending timeout: %is\n", nTime - pnode->nLastSend);
-                    pnode->fDisconnect = true;
+                    DisconnectIdle = true;
                 }
-                else if (nTime - pnode->nLastRecv > (pnode->nVersion > BIP0031_VERSION ? TIMEOUT_INTERVAL : 90*60))
+                if (nTime - pnode->nLastRecv > DATA_TIMEOUT)
                 {
                     LogPrintf("socket receive timeout: %is\n", nTime - pnode->nLastRecv);
-                    pnode->fDisconnect = true;
+                    DisconnectIdle = true;
                 }
-                else if (pnode->nPingNonceSent && pnode->nPingUsecStart + TIMEOUT_INTERVAL * 1000000 < GetTimeMicros())
+                if (pnode->nPingNonceSent && pnode->nPingUsecStart + TIMEOUT_INTERVAL * 1000000 < GetTimeMicros())
                 {
                     LogPrintf("ping timeout: %fs\n", 0.000001 * (GetTimeMicros() - pnode->nPingUsecStart));
-                    pnode->fDisconnect = true;
+                    DisconnectIdle = true;
                 }
+
+                if (DisconnectIdle == true)
+                {
+                    // remove from vNodes
+                    vNodes.erase(remove(vNodes.begin(), vNodes.end(), pnode), vNodes.end());
+
+                    // release outbound grant (if any)
+                    pnode->grantOutbound.Release();
+
+                    // close socket and cleanup
+                    pnode->CloseSocketDisconnect();
+
+                    // hold in disconnected pool until all refs are released
+                    if (pnode->fNetworkNode || pnode->fInbound)
+                        pnode->Release();
+                    vNodesDisconnected.push_back(pnode);
+                }
+                
             }
         }
-        {
-            LOCK(cs_vNodes);
-            BOOST_FOREACH(CNode* pnode, vNodesCopy)
-                pnode->Release();
+        {		
+            LOCK(cs_vNodes);		
+            BOOST_FOREACH(CNode* pnode, vNodesCopy)		
+                pnode->Release();		
         }
+
+
+
     }
+
+    // Refresh nodes/peers every X minutes
+    RefreshRecentConnections(REFRESH_CONNECTIONS);
+
 }
 
 #ifdef USE_UPNP
@@ -1503,12 +1463,12 @@ void MapPort(bool)
 void ThreadDNSAddressSeed()
 {
     // goal: only query DNS seeds if address need is acute
-    if ((addrman.size() > 0) &&
+    if ((addrman.size() > 4) &&
         (!GetBoolArg("-forcednsseed", false))) {
         MilliSleep(11 * 1000);
 
         LOCK(cs_vNodes);
-        if (vNodes.size() >= 2) {
+        if (vNodes.size() >= 10) {
             LogPrintf("P2P peers available. Skipped DNS seeding.\n");
             return;
         }
@@ -1529,11 +1489,13 @@ void ThreadDNSAddressSeed()
             {
                 BOOST_FOREACH(CNetAddr& ip, vIPs)
                 {
+                    if (found < 16){
                     int nOneDay = 24*3600;
                     CAddress addr = CAddress(CService(ip, Params().GetDefaultPort()));
                     addr.nTime = GetTime() - 3*nOneDay - GetRand(4*nOneDay); // use a random age between 3 and 7 days old
                     vAdd.push_back(addr);
                     found++;
+                    }
                 }
             }
             addrman.Add(vAdd, CNetAddr(seed.name, true));
@@ -1542,19 +1504,6 @@ void ThreadDNSAddressSeed()
 
     LogPrintf("%d addresses found from DNS seeds\n", found);
 }
-
-void DumpAddresses()
-{
-    int64_t nStart = GetTimeMillis();
-
-    CAddrDB adb;
-    adb.Write(addrman);
-
-    LogPrint("net", "Flushed %d addresses to peers.dat  %dms\n",
-           addrman.size(), GetTimeMillis() - nStart);
-}
-
-
 
 void static ProcessOneShot()
 {
@@ -1673,6 +1622,7 @@ void ThreadOpenConnections()
     }
 }
 
+
 void ThreadOpenAddedConnections()
 {
     {
@@ -1764,21 +1714,30 @@ bool OpenNetworkConnection(const CAddress& addrConnect, CSemaphoreGrant *grantOu
     boost::this_thread::interruption_point();
 
     if (!pnode)
+    {
         return false;
+    }
+
+    FireWall(pnode, "OpenNetConnection");
+
     if (grantOutbound)
-
-        FireWall(pnode, "Connected");
-
+    {
         grantOutbound->MoveTo(pnode->grantOutbound);
+    }
+        
     pnode->fNetworkNode = true;
+
     if (fOneShot)
+    {
         pnode->fOneShot = true;
+    }
 
     return true;
 }
 
 void ThreadMessageHandler()
 {
+
     SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
     while (true)
     {
@@ -1810,8 +1769,6 @@ void ThreadMessageHandler()
                 {
                     if (!g_signals.ProcessMessages(pnode))
                         pnode->CloseSocketDisconnect();
-
-                            FireWall(pnode, "GetData");
 
                     if (pnode->nSendSize < SendBufferSize())
                     {
@@ -2321,11 +2278,13 @@ CNode::CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn, bool fIn
     fNetworkNode = false;
     fSuccessfullyConnected = false;
     fDisconnect = false;
+    hashCheckpointKnown = 0;
     nRefCount = 0;
     nSendSize = 0;
     nSendOffset = 0;
     hashContinue = 0;
     nStartingHeight = -1;
+    nSyncHeight = 0;
     fGetAddr = false;
     fRelayTxes = false;
     setInventoryKnown.max_size(SendBufferSize() / 1000);
@@ -2334,7 +2293,9 @@ CNode::CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn, bool fIn
     nPingUsecStart = 0;
     nPingUsecTime = 0;
     fPingQueued = false;
-
+    nTrafficAverage = 0;
+    nTrafficRatio = 0;
+    nTrafficTimestamp = 0;
     {
         LOCK(cs_nLastNodeId);
         id = nLastNodeId++;

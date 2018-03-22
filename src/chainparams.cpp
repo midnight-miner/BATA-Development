@@ -27,6 +27,8 @@ struct SeedSpec6 {
  * Main network
  */
 
+
+
 //! Convert the pnSeeds6 array into usable address objects.
 static void convertSeed6(std::vector<CAddress> &vSeedsOut, const SeedSpec6 *data, unsigned int count)
 {
@@ -63,25 +65,27 @@ static Checkpoints::MapCheckpoints mapCheckpoints =
 		( 440000, uint256("0xac145d581b0c014764400f6265fbc70e1e72f62ec37506be4ad52806315c6e18"))
 		( 446000, uint256("0x6353453ab70c8f8d7c2a427848b31815b403954b35897fc171cdcb90efdc876c"))
 		( 550000, uint256("0xc3e04a21969b9b7c8b058336a752829de20f60381ab421dc65d8e7dc652fe47e"))
+		( 700000, uint256("0x3dde1aa60ab78ac29e84fa2baf641638dff95514af72e8c1dcf9fec89da84700"))
+		( 750000, uint256("0x16f1891c3c29bbd40fc91608dec9bf8744ec14bd750f32d2f8c01dae6358b213"))
         ;
 
 static const Checkpoints::CCheckpointData data = {
         &mapCheckpoints,
-        1474222586, // * UNIX timestamp of last checkpoint block
-        634838,    // * total number of transactions between genesis and last checkpoint
+		1503636911, // * UNIX timestamp of last checkpoint block
+        856096,    // * total number of transactions between genesis and last checkpoint
                     //   (the tx=... number in the SetBestChain debug.log lines)
-        8000.0     // * estimated number of transactions per day after checkpoint
+        960        // * estimated number of transactions per day after checkpoint
     };
 
 static Checkpoints::MapCheckpoints mapCheckpointsTestnet =
         boost::assign::map_list_of
-        ( 546, uint256("0xa0fea99a6897f531600c8ae53367b126824fd6a847b2b2b73817a95b8e27e602"))
+        ( 1, uint256("0xc1976360739525c4ea0949fc4a1b0086284614198a0f133b1513d79c55b5466b"))
         ;
 static const Checkpoints::CCheckpointData dataTestnet = {
         &mapCheckpointsTestnet,
-        1365458829,
-        547,
-        576
+		1503885814,
+        2,
+        960
     };
 
 static Checkpoints::MapCheckpoints mapCheckpointsRegtest =
@@ -149,18 +153,18 @@ public:
         hashGenesisBlock = genesis.GetHash();
         assert(hashGenesisBlock == uint256("0xb4bee36fd54a6176fd832f462641415c142d50e4b378f71c041870c2b1186bc8"));
         assert(genesis.hashMerkleRoot == uint256("0x3164764afd26106715d7e58de57468e236b167d639095be545459d2bcf94afe7"));
+        base58Prefixes[PUBKEY_ADDRESS] = boost::assign::list_of(25).convert_to_container<std::vector<unsigned char> >();						// Bata addresses start with 'B'
+        base58Prefixes[SCRIPT_ADDRESS] = boost::assign::list_of(5)(85).convert_to_container<std::vector<unsigned char> >();						// Bata script addresses start with '3'
+//        base58Prefixes[SCRIPT_ADDRESS2] = list_of(85);						// Bata script addresses start with 'b'
+        base58Prefixes[SECRET_KEY] =     boost::assign::list_of(188).convert_to_container<std::vector<unsigned char> >();						// Bata private keys start with '2'
+        base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0xA4)(0x0C)(0x86)(0xFA).convert_to_container<std::vector<unsigned char> >();	// Bata BIP32 pubkeys start with 'bpub'
+        base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0xA4)(0x0B)(0x91)(0xBD).convert_to_container<std::vector<unsigned char> >();	// Bata BIP32 prvkeys start with 'bprv'
+		base58Prefixes[EXT_COIN_TYPE]  = boost::assign::list_of(0x8000000b).convert_to_container<std::vector<unsigned char> >();				// Bata BIP44 coin type is 'b'
 
+        vFixedSeeds.clear();
+        vSeeds.clear();
+        vSeeds.push_back(CDNSSeedData("bata.io", "list.batadnsseed.bata.io"));
         vSeeds.push_back(CDNSSeedData("midnightnet.net", "batadnsseed.midnightminer.net"));
-        vSeeds.push_back(CDNSSeedData("bata.io", "batadnsseed.bata.io"));
-
-        base58Prefixes[PUBKEY_ADDRESS] = list_of(25);						// Bata addresses start with 'B'
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(5);						// Bata script addresses start with '3'
-        base58Prefixes[SCRIPT_ADDRESS2] = list_of(85);						// Bata script addresses start with 'b'
-        base58Prefixes[SECRET_KEY] =     list_of(188);						// Bata private keys start with '2'
-        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0xA4)(0x0C)(0x86)(0xFA);	// Bata BIP32 pubkeys start with 'bpub'
-        base58Prefixes[EXT_SECRET_KEY] = list_of(0xA4)(0x0B)(0x91)(0xBD);	// Bata BIP32 prvkeys start with 'bprv'
-		base58Prefixes[EXT_COIN_TYPE]  = list_of(0x8000000b);				// Bata BIP44 coin type is 'b'
-
         convertSeed6(vFixedSeeds, pnSeed6_main, ARRAYLEN(pnSeed6_main));
 
         fRequireRPCPassword = true;
@@ -206,10 +210,11 @@ public:
         nMaxTipAge = 0x7fffffff;
 
         //! Modify the testnet genesis block so the timestamp is valid for a later start.
-        genesis.nTime = 1388880557;
-        genesis.nNonce = 387006691;
+        genesis.nTime = 1503885814;
+        genesis.nNonce = 698199;
+
         hashGenesisBlock = genesis.GetHash();
-//        assert(hashGenesisBlock == uint256("0xb78197f0e175697646db1f738edc1ffdcb30588ebe70e7e16026489076577061"));
+        assert(hashGenesisBlock == uint256("0x00000a6800e5e2b43515cd12da56861eb482ebcdfa6ee92c1a8d7836ff654500"));
 
         vFixedSeeds.clear();
         vSeeds.clear();
@@ -217,11 +222,11 @@ public:
         vSeeds.push_back(CDNSSeedData("midnightminer.net", "testnet-bata.midnightminer.net"));
 //        vSeeds.push_back(CDNSSeedData("wemine-testnet.com", "dnsseed.wemine-testnet.com"));
 
-        base58Prefixes[PUBKEY_ADDRESS] = list_of(111);
-        base58Prefixes[SCRIPT_ADDRESS] = list_of(196);
-        base58Prefixes[SECRET_KEY]     = list_of(239);
-        base58Prefixes[EXT_PUBLIC_KEY] = list_of(0x04)(0x35)(0x87)(0xCF);
-        base58Prefixes[EXT_SECRET_KEY] = list_of(0x04)(0x35)(0x83)(0x94);
+        base58Prefixes[PUBKEY_ADDRESS] = boost::assign::list_of(111).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[SCRIPT_ADDRESS] = boost::assign::list_of(196).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[SECRET_KEY]     = boost::assign::list_of(239).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[EXT_PUBLIC_KEY] = boost::assign::list_of(0x04)(0x35)(0x87)(0xCF).convert_to_container<std::vector<unsigned char> >();
+        base58Prefixes[EXT_SECRET_KEY] = boost::assign::list_of(0x04)(0x35)(0x83)(0x94).convert_to_container<std::vector<unsigned char> >();
 
         convertSeed6(vFixedSeeds, pnSeed6_test, ARRAYLEN(pnSeed6_test));
 
@@ -231,6 +236,7 @@ public:
         fDefaultConsistencyChecks = false;
         fRequireStandard = false;
         fMineBlocksOnDemand = false;
+        fSkipProofOfWorkCheck = true;
         fTestnetToBeDeprecatedFieldRPC = true;
 
         // Bata: v2 enforced using Bitcoin's supermajority rule
